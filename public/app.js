@@ -199,11 +199,12 @@ function renderChampion(champion, mode, realMatches = 0) {
 
     const rank = getFifaRank(champion);
     const pts = getFifaPoints(champion).toFixed(2);
-    document.getElementById('champion-rank-badge').textContent = `${t('rank')} #${rank} • ${pts} pts`;
+    document.getElementById('champion-rank-badge').textContent = `${t('rank')} #${rank} • ${pts} ${t('pts')}`;
 
     const tag = document.getElementById('data-source-tag');
     if (mode === 'live' && realMatches > 0) {
-        tag.textContent = `${t('source_live')} — ${realMatches} ${realMatches === 1 ? 'jogo real' : 'jogos reais'} + simulação`;
+        const matchWord = realMatches === 1 ? t('real_match') : t('real_matches');
+        tag.textContent = `${t('source_live')} — ${realMatches} ${matchWord} + ${t('source_simulation').toLowerCase()}`;
     } else {
         tag.textContent = t('source_simulation');
     }
@@ -235,7 +236,8 @@ function renderGroups(groups) {
         card.className = 'group-card';
 
         const title = document.createElement('h3');
-        title.textContent = group.name;
+        // Traduz o prefixo "Group" / "Grupo" / "Grupo" conforme lang
+        title.textContent = group.name.replace(/^Group\s+/, `${t('group')} `);
         card.appendChild(title);
 
         group.standings.forEach((team, idx) => {
@@ -248,7 +250,7 @@ function renderGroups(groups) {
             if (team.realMatches > 0) {
                 const realBadge = document.createElement('span');
                 realBadge.className = 'real-badge';
-                realBadge.title = `${team.realMatches} jogo(s) com resultado real`;
+                realBadge.title = `${team.realMatches} ${t('real_match_title')}`;
                 realBadge.textContent = '🔴';
                 nameSpan.appendChild(realBadge);
             }
@@ -312,7 +314,7 @@ function updateTimestamp(source, realCount) {
         currentLang === 'pt' ? 'pt-BR' : currentLang === 'es' ? 'es-ES' : 'en-GB'
     );
     let txt = `${t('last_updated')}: ${now}`;
-    if (realCount > 0) txt += ` • ${realCount} jogos reais integrados`;
+    if (realCount > 0) txt += ` • ${realCount} ${t('real_integrated')}`;
     el.textContent = txt;
 }
 
