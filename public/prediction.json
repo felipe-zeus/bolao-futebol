@@ -1,0 +1,103 @@
+{
+  "tournament": "2026 World Cup Simulation",
+  "groups": [
+    {
+      "name": "Group A",
+      "standings": [
+        "Spain",
+        "Ecuador",
+        "Portugal",
+        "Belgium"
+      ]
+    },
+    {
+      "name": "Group B",
+      "standings": [
+        "Morocco",
+        "Turkey",
+        "Ivory Coast",
+        "Brazil"
+      ]
+    },
+    {
+      "name": "Group C",
+      "standings": [
+        "Iran",
+        "Italy",
+        "Argentina",
+        "Denmark"
+      ]
+    },
+    {
+      "name": "Group D",
+      "standings": [
+        "Croatia",
+        "Germany",
+        "France",
+        "Norway"
+      ]
+    },
+    {
+      "name": "Group E",
+      "standings": [
+        "Colombia",
+        "Austria",
+        "Japan",
+        "Egypt"
+      ]
+    },
+    {
+      "name": "Group F",
+      "standings": [
+        "Mexico",
+        "Algeria",
+        "Nigeria",
+        "Uzbekistan"
+      ]
+    },
+    {
+      "name": "Group G",
+      "standings": [
+        "England",
+        "South Korea",
+        "Australia",
+        "United States"
+      ]
+    },
+    {
+      "name": "Group H",
+      "standings": [
+        "Senegal",
+        "Canada",
+        "Netherlands",
+        "Switzerland"
+      ]
+    }
+  ],
+  "knockout": {
+    "roundOf16": [
+      "Spain vs Canada",
+      "Morocco vs South Korea",
+      "Iran vs Algeria",
+      "Croatia vs Austria",
+      "Colombia vs Germany",
+      "Mexico vs Italy",
+      "England vs Turkey",
+      "Senegal vs Ecuador"
+    ],
+    "quarterFinals": [
+      "Spain vs Morocco",
+      "Iran vs Croatia",
+      "Germany vs Mexico",
+      "Turkey vs Senegal"
+    ],
+    "semiFinals": [
+      "Morocco vs Iran",
+      "Mexico vs Senegal"
+    ],
+    "final": [
+      "Morocco vs Senegal"
+    ],
+    "champion": "Morocco"
+  }
+}

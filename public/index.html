@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bolão Copa do Mundo 2026</title>
+    <meta name="description" content="Simulador de previsões da Copa do Mundo 2026 baseado no Ranking Oficial FIFA com dados em tempo real.">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="stadium-pattern"></div>
+    <div class="glow-bg"></div>
+
+    <header class="sport-header" id="main-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="logo-icon">⚽</div>
+                <div class="header-text">
+                    <h1 data-i18n="title">🏆 Bolão Copa do Mundo 2026</h1>
+                    <p data-i18n="subtitle">Simulador baseado no Ranking Oficial FIFA • Dados em Tempo Real</p>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div id="data-status" class="status-badge">
+                    <span class="pulse-dot"></span>
+                    <span id="status-text">🔵 Simulação</span>
+                </div>
+                <div class="lang-switcher">
+                    <button class="lang-btn" data-lang="pt" onclick="setLang('pt')">🇧🇷 PT</button>
+                    <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+                    <button class="lang-btn" data-lang="es" onclick="setLang('es')">🇪🇸 ES</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container" id="app-container">
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-wrapper">
+            <div class="loading-spinner"></div>
+            <p data-i18n="loading">Carregando dados...</p>
+        </div>
+
+        <!-- Champion Section -->
+        <section id="champion-section" class="glass-card champion-card fade-in" style="display:none">
+            <div class="champion-bg-text">CAMPEÃO</div>
+            <p class="section-label" data-i18n="champion_label">O Grande Campeão</p>
+            <div class="champion-display">
+                <span class="trophy" id="champion-flag">🏆</span>
+                <h2 id="champion-name">...</h2>
+                <div id="champion-rank-badge" class="rank-badge"></div>
+            </div>
+            <p class="data-source-tag" id="data-source-tag"></p>
+        </section>
+
+        <!-- Knockout Grid -->
+        <div id="knockout-section" style="display:none">
+            <div class="bracket-grid">
+                <section class="glass-card">
+                    <h2 data-i18n="semifinals">Semifinais</h2>
+                    <ul id="semi-finals" class="match-list"></ul>
+                </section>
+                <section class="glass-card highlight-card">
+                    <h2 data-i18n="final">A Grande Final</h2>
+                    <ul id="final-match" class="match-list"></ul>
+                </section>
+            </div>
+
+            <section class="glass-card">
+                <h2 data-i18n="quarterfinals">Quartas de Final</h2>
+                <ul id="quarter-finals" class="match-list grid-list"></ul>
+            </section>
+
+            <section class="glass-card">
+                <h2 data-i18n="roundOf16">Oitavas de Final</h2>
+                <ul id="round-16" class="match-list grid-list"></ul>
+            </section>
+
+            <section class="glass-card">
+                <h2 data-i18n="round32">Fase de Classificação (32)</h2>
+                <ul id="round-32" class="match-list grid-list"></ul>
+            </section>
+        </div>
+
+        <!-- Group Stage -->
+        <section class="glass-card" id="groups-section" style="display:none">
+            <h2 data-i18n="groups">Fase de Grupos</h2>
+            <div id="groups" class="groups-grid"></div>
+        </section>
+
+        <!-- Ranking Table -->
+        <section class="glass-card" id="ranking-section" style="display:none">
+            <h2 data-i18n="rank">Ranking FIFA (Junho 2026)</h2>
+            <div id="ranking-table"></div>
+        </section>
+    </main>
+
+    <footer class="glass-footer">
+        <p id="last-updated-text"></p>
+        <p data-i18n="data_source">Dados: Ranking FIFA + Simulação Matemática</p>
+    </footer>
+
+    <script src="i18n.js"></script>
+    <script src="engine.js"></script>
+    <script src="live.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
