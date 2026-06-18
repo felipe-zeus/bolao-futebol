@@ -1,9 +1,16 @@
 {
+  "name": "bolao-copa-2026",
+  "version": "1.0.0",
+  "description": "Bolão Copa do Mundo 2026 — Simulador com dados ao vivo",
+  "main": "proxy/server.js",
+  "scripts": {
+    "start": "node proxy/server.js",
+    "dev:proxy": "node proxy/server.js",
+    "dev:frontend": "npx serve public -l 3001"
+  },
   "dependencies": {
     "csv-parser": "^3.2.1",
-    "dotenv": "^17.4.2"
-  },
-  "devDependencies": {
+    "dotenv": "^17.4.2",
     "express": "^5.2.1"
   }
 }

@@ -353,10 +353,18 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     color: var(--text-dark);
 }
 
+/* Ponto verde sutil — indica que há resultado real integrado */
 .real-badge {
-    font-size: 0.6rem;
-    margin-left: 0.4rem;
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--br-green);
+    margin-left: 5px;
     vertical-align: middle;
+    opacity: 0.85;
+    box-shadow: 0 0 4px rgba(0, 156, 59, 0.6);
+    flex-shrink: 0;
 }
 
 /* --- Groups --- */
@@ -506,6 +514,47 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     font-weight: 600;
     background: rgba(0,0,0,0.4);
     margin-top: 3rem;
+}
+
+/* --- Placar Ao Vivo --- */
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 60, 60, 0.7); }
+    50%       { opacity: 0.85; transform: scale(1.08); box-shadow: 0 0 0 6px rgba(255, 60, 60, 0); }
+}
+
+@keyframes liveGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(255, 60, 60, 0.4); }
+    50%       { box-shadow: 0 0 20px rgba(255, 60, 60, 0.8), 0 0 40px rgba(255, 60, 60, 0.3); }
+}
+
+/* Placar ao vivo — pulsante em vermelho */
+.match-score.live-score {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    color: #fff;
+    font-size: 1.3rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    animation: livePulse 1.5s ease-in-out infinite;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Minutagem do jogo ao vivo */
+.match-minute {
+    font-size: 0.75rem;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    background: rgba(255,255,255,0.2);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    line-height: 1;
+}
+
+/* Item de partida em andamento — borda lateral vermelha */
+.live-match {
+    border-left: 3px solid #e74c3c !important;
+    animation: liveGlow 2s ease-in-out infinite;
 }
 
 /* --- Responsive --- */

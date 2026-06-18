@@ -6,87 +6,123 @@
 //   2. Aplica os resultados reais na tabela de grupos
 //   3. Projeta os jogos ainda não realizados via Ranking FIFA
 //   4. Refaz o chaveamento do mata-mata com base no que há de real
-//   5. Simula as fases futuras a partir do ponto atual
-//   6. Auto-refresh a cada 3 minutos durante a Copa
+//   5. Simula as fases futuras APENAS UMA VEZ por conjunto de resultados
+//      → Re-simula somente quando novos jogos forem encerrados
+//   6. Polling: 30s com jogo ao vivo, 3min caso contrário
+//   7. Traduções dinâmicas completas via tTeam() + t()
 // ==============================================================
 
 let cachedData = null;
-let lastLiveSource = null;
+let _pollingTimer = null;
 
-// ---- UTILITY ----
-function formatMatch(matchString, result = null) {
+// Controle de estabilidade da simulação:
+// Só re-simula quando o número de jogos encerrados muda
+let _lastFinishedCount = -1;
+let _cachedSimulation  = null;
+
+// ── UTILITY ───────────────────────────────────────────────────
+
+// Formata uma partida com placar (encerrado ou ao vivo)
+// Nomes traduzidos via tTeam() no momento da renderização
+function formatMatch(matchString, finishedResults = null, liveScores = null) {
     const teams = matchString.split(' vs ');
     if (teams.length !== 2) return matchString;
 
-    const [a, b] = teams;
+    const [engA, engB] = teams;
+    const a = tTeam(engA); // nome traduzido para exibição
+    const b = tTeam(engB);
+
+    const key1 = matchString;
+    const key2 = `${engB} vs ${engA}`;
+
+    // Jogo ao vivo → placar pulsante
+    const liveResult = liveScores ? (liveScores[key1] || liveScores[key2]) : null;
+    // Jogo encerrado → placar fixo
+    const doneResult = finishedResults ? (finishedResults[key1] || finishedResults[key2]) : null;
+
     let scoreHtml = '';
-    if (result && result.homeScore >= 0) {
-        const isConfirmed = result.winner !== undefined;
-        scoreHtml = `<span class="match-score ${isConfirmed ? 'real' : ''}">${result.homeScore}–${result.awayScore}</span>`;
+    if (liveResult) {
+        const min = liveResult.minute
+            ? `<span class="match-minute">${liveResult.minute}'</span>` : '';
+        scoreHtml = `<span class="match-score live-score">${liveResult.homeScore}–${liveResult.awayScore}${min}</span>`;
+    } else if (doneResult && doneResult.homeScore >= 0) {
+        scoreHtml = `<span class="match-score real">${doneResult.homeScore}–${doneResult.awayScore}</span>`;
     }
 
-    return `<span class="team-a">${a}</span>${scoreHtml}<span class="vs">VS</span><span class="team-b">${b}</span>`;
+    return `<span class="team-a">${a}</span>${scoreHtml}<span class="vs">${t('vs')}</span><span class="team-b">${b}</span>`;
 }
 
-function setStatus(mode, sourceLabel = '') {
+function setStatus(mode, sourceLabel = '', hasLive = false) {
     const dot = document.querySelector('.pulse-dot');
     const statusText = document.getElementById('status-text');
     if (mode === 'live') {
         dot.classList.add('live');
-        statusText.textContent = `${t('status_live')} ${sourceLabel ? `(${sourceLabel})` : ''}`;
+        statusText.textContent = (hasLive ? t('status_live_playing') : t('status_live'))
+            + (sourceLabel ? ` (${sourceLabel})` : '');
     } else {
         dot.classList.remove('live');
         statusText.textContent = t('status_simulation');
     }
 }
 
-// ---- MOTOR HÍBRIDO: Integra resultados reais + simula o resto ----
+// ── MOTOR HÍBRIDO: Integra resultados reais + simula o resto ──
+// Etapas:
+//   1. Computa Elo dinâmico (pontos atualizados após resultados reais)
+//   2. Aplica resultados reais fixos na fase de grupos
+//   3. Simula jogos ainda não realizados de forma DETERMINÍSTICA
+//      → quem tem maior probabilidade (Elo atualizado) SEMPRE vence
+//   4. Monta o chaveamento do mata-mata com a mesma lógica
 function runHybridSimulation(liveResults) {
-    // liveResults: { "Home vs Away": { winner, homeScore, awayScore } } ou null
     const hasLive = liveResults && Object.keys(liveResults).length > 0;
 
-    // ── FASE DE GRUPOS ──────────────────────────────────────────
+    // ── PASSO 1: Elo dinâmico ─────────────────────────────────
+    // Recalcula pontos de todas as seleções considerando resultados reais
+    const dynPts = computeDynamicElo(liveResults);
+
+    // Helper determinístico local
+    function resolveMatch(teamA, teamB) {
+        const real = liveResults?.[`${teamA} vs ${teamB}`]
+                  || liveResults?.[`${teamB} vs ${teamA}`];
+        if (real?.winner) return real.winner;
+        // Determinístico: maior probabilidade Elo sempre vence
+        return simulateMatchDeterministic(teamA, teamB, dynPts);
+    }
+
+    // ── PASSO 2: Fase de Grupos ───────────────────────────────
     const groupResults = {};
 
     for (const [groupName, teams] of Object.entries(WORLD_CUP_2026_GROUPS)) {
-        const standings = teams.map(t => ({
-            name: t,
-            pts: 0,
-            gf: 0,
-            ga: 0,
-            rank: getFifaRank(t),
-            fifaPoints: getFifaPoints(t),
+        const standings = teams.map(team => ({
+            name: team,
+            pts: 0, gf: 0, ga: 0,
+            rank: getFifaRank(team),
+            fifaPoints: dynPts[team] ?? getFifaPoints(team),  // usa Elo atualizado
             realMatches: 0
         }));
 
-        // Round-robin: para cada par de times no grupo
         for (let i = 0; i < standings.length; i++) {
             for (let j = i + 1; j < standings.length; j++) {
                 const home = standings[i];
                 const away = standings[j];
-                const matchKey1 = `${home.name} vs ${away.name}`;
-                const matchKey2 = `${away.name} vs ${home.name}`;
+                const key1 = `${home.name} vs ${away.name}`;
+                const key2 = `${away.name} vs ${home.name}`;
+                const real = liveResults?.[key1] || liveResults?.[key2];
 
-                const realResult = liveResults?.[matchKey1] || liveResults?.[matchKey2];
-
-                if (realResult && realResult.winner !== undefined) {
-                    // ✅ RESULTADO REAL — aplica diretamente
-                    const homeScore = realResult.homeScore;
-                    const awayScore = realResult.awayScore;
-                    home.gf += homeScore; home.ga += awayScore;
-                    away.gf += awayScore; away.ga += homeScore;
+                if (real && real.winner !== undefined) {
+                    // ✅ RESULTADO REAL — aplica diretamente (fixo)
+                    const hs = real.homeScore, as = real.awayScore;
+                    home.gf += hs; home.ga += as;
+                    away.gf += as; away.ga += hs;
                     home.realMatches++; away.realMatches++;
-
-                    if (homeScore > awayScore)      { home.pts += 3; }
-                    else if (homeScore < awayScore)  { away.pts += 3; }
-                    else                             { home.pts += 1; away.pts += 1; }
+                    if (hs > as)      { home.pts += 3; }
+                    else if (hs < as) { away.pts += 3; }
+                    else              { home.pts += 1; away.pts += 1; }
                 } else {
-                    // 🔵 SIMULAÇÃO — jogo ainda não realizado, usa Ranking FIFA
-                    const probHome = winProbability(home.name, away.name);
-                    const rand = Math.random();
-                    if (rand < probHome * 0.70)      { home.pts += 3; }
-                    else if (rand < probHome * 0.70 + 0.18) { home.pts += 1; away.pts += 1; }
-                    else                             { away.pts += 3; }
+                    // 🔵 SIMULAÇÃO DETERMINÍSTICA — Elo dinâmico, sem aleatoriedade
+                    const probHome = winProbabilityDynamic(home.name, away.name, dynPts);
+                    if (probHome > 0.5)      { home.pts += 3; }
+                    else if (probHome < 0.5) { away.pts += 3; }
+                    else                      { home.pts += 1; away.pts += 1; } // empate técnico
                 }
             }
         }
@@ -99,43 +135,32 @@ function runHybridSimulation(liveResults) {
         groupResults[groupName] = standings;
     }
 
-    // ── MATA-MATA ────────────────────────────────────────────────
+    // ── PASSO 3: Mata-Mata ────────────────────────────────────
     const groupLetters = Object.keys(WORLD_CUP_2026_GROUPS);
-    const groupWinners = {};
-    const groupRunnersUp = {};
+    const groupWinners = {}, groupRunnersUp = {};
     const thirdPlace = [];
 
     for (const [g, standings] of Object.entries(groupResults)) {
-        groupWinners[g] = standings[0];
+        groupWinners[g]   = standings[0];
         groupRunnersUp[g] = standings[1];
         thirdPlace.push({ ...standings[2], group: g });
     }
-
     thirdPlace.sort((a, b) => b.pts - a.pts || b.fifaPoints - a.fifaPoints);
     const best8Third = thirdPlace.slice(0, 8);
 
-    // Helpers para usar resultado real ou simular
-    function resolveMatch(teamA, teamB) {
-        const key1 = `${teamA} vs ${teamB}`;
-        const key2 = `${teamB} vs ${teamA}`;
-        const real = liveResults?.[key1] || liveResults?.[key2];
-        if (real?.winner) return real.winner;
-        return simulateMatch(teamA, teamB);
-    }
-
-    // Round of 32
+    // Round of 32 — 16 partidas
     const r32Matches = [], r32Winners = [];
-    for (let i = 0; i < 6; i++) {
-        const w = groupWinners[groupLetters[i]].name;
+    for (let i = 0; i < 12; i++) {
+        const w  = groupWinners[groupLetters[i]].name;
         const ru = groupRunnersUp[groupLetters[11 - i]].name;
         r32Matches.push(`${w} vs ${ru}`);
         r32Winners.push(resolveMatch(w, ru));
     }
-    for (let i = 6; i < 12; i++) {
-        const w = groupWinners[groupLetters[i]].name;
-        const t3 = best8Third[i - 6]?.name || groupRunnersUp[groupLetters[i - 6]].name;
-        r32Matches.push(`${w} vs ${t3}`);
-        r32Winners.push(resolveMatch(w, t3));
+    for (let i = 0; i < 4; i++) {
+        const a = best8Third[i]?.name     || groupRunnersUp[groupLetters[i]].name;
+        const b = best8Third[i + 4]?.name || groupRunnersUp[groupLetters[i + 6]].name;
+        r32Matches.push(`${a} vs ${b}`);
+        r32Winners.push(resolveMatch(a, b));
     }
 
     // Round of 16
@@ -164,13 +189,13 @@ function runHybridSimulation(liveResults) {
 
     // Final
     const finalMatch = [`${sfWinners[0]} vs ${sfWinners[1]}`];
-    const champion = resolveMatch(sfWinners[0], sfWinners[1]);
+    const champion   = resolveMatch(sfWinners[0], sfWinners[1]);
 
     return {
         tournament: 'FIFA World Cup 2026',
         generatedAt: new Date().toISOString(),
         source: hasLive ? 'live' : 'simulation',
-        fifaRankingDate: 'April 1, 2026',
+        fifaRankingDate: 'Dynamic (post-results Elo)',
         realMatchesUsed: hasLive ? Object.keys(liveResults).length : 0,
         groups: Object.entries(groupResults).map(([name, standings]) => ({
             name: `Group ${name}`,
@@ -179,27 +204,31 @@ function runHybridSimulation(liveResults) {
                 pts: s.pts,
                 fifaRank: s.rank,
                 fifaPoints: s.fifaPoints,
-                realMatches: s.realMatches || 0
+                realMatches: s.realMatches || 0,
+                dynPts: dynPts[s.name] ?? getFifaPoints(s.name)
             }))
         })),
         knockout: {
-            roundOf32: r32Matches,
-            roundOf16: r16Matches,
+            roundOf32:    r32Matches,
+            roundOf16:    r16Matches,
             quarterFinals: qfMatches,
-            semiFinals: sfMatches,
-            final: finalMatch,
+            semiFinals:   sfMatches,
+            final:        finalMatch,
             champion
         }
     };
 }
 
-// ---- RENDER FUNCTIONS ----
+// ── RENDER FUNCTIONS ─────────────────────────────────────────
+
 function renderChampion(champion, mode, realMatches = 0) {
-    document.getElementById('champion-name').textContent = champion;
+    // Nome do campeão traduzido
+    document.getElementById('champion-name').textContent = tTeam(champion);
 
     const rank = getFifaRank(champion);
-    const pts = getFifaPoints(champion).toFixed(2);
-    document.getElementById('champion-rank-badge').textContent = `${t('rank')} #${rank} • ${pts} ${t('pts')}`;
+    const pts  = getFifaPoints(champion).toFixed(2);
+    document.getElementById('champion-rank-badge').textContent =
+        `${t('rank')} #${rank} • ${pts} ${t('pts')}`;
 
     const tag = document.getElementById('data-source-tag');
     if (mode === 'live' && realMatches > 0) {
@@ -211,7 +240,7 @@ function renderChampion(champion, mode, realMatches = 0) {
     document.getElementById('champion-section').style.display = '';
 }
 
-function renderMatchList(elementId, matches, liveResults = null) {
+function renderMatchList(elementId, matches, finishedResults = null, liveScores = null) {
     const ul = document.getElementById(elementId);
     if (!ul) return;
     ul.innerHTML = '';
@@ -220,10 +249,12 @@ function renderMatchList(elementId, matches, liveResults = null) {
         li.className = 'match-item fade-in';
 
         const teams = match.split(' vs ');
-        const key1 = match, key2 = teams.length === 2 ? `${teams[1]} vs ${teams[0]}` : null;
-        const result = liveResults ? (liveResults[key1] || (key2 ? liveResults[key2] : null)) : null;
+        const key1  = match;
+        const key2  = teams.length === 2 ? `${teams[1]} vs ${teams[0]}` : null;
+        const isLive = liveScores && (liveScores[key1] || (key2 ? liveScores[key2] : null));
+        if (isLive) li.classList.add('live-match');
 
-        li.innerHTML = formatMatch(match, result);
+        li.innerHTML = formatMatch(match, finishedResults, liveScores);
         ul.appendChild(li);
     });
 }
@@ -236,7 +267,7 @@ function renderGroups(groups) {
         card.className = 'group-card';
 
         const title = document.createElement('h3');
-        // Traduz o prefixo "Group" / "Grupo" / "Grupo" conforme lang
+        // "Group A" → "Grupo A" / "Group A" / "Grupo A"
         title.textContent = group.name.replace(/^Group\s+/, `${t('group')} `);
         card.appendChild(title);
 
@@ -245,24 +276,24 @@ function renderGroups(groups) {
             row.className = 'group-team' + (idx < 2 ? ' qualified' : '');
 
             const nameSpan = document.createElement('span');
-            nameSpan.textContent = team.name;
-            // Badge "real" se time tem jogos reais
+            // Nome traduzido para exibição
+            nameSpan.textContent = tTeam(team.name);
+
             if (team.realMatches > 0) {
                 const realBadge = document.createElement('span');
                 realBadge.className = 'real-badge';
                 realBadge.title = `${team.realMatches} ${t('real_match_title')}`;
-                realBadge.textContent = '🔴';
+                // Ponto verde sutil — indica dados reais (não simulação)
                 nameSpan.appendChild(realBadge);
             }
 
             const meta = document.createElement('span');
             meta.className = 'team-pts';
-
             const rankTag = document.createElement('span');
             rankTag.className = 'team-rank-tag';
             rankTag.textContent = `#${team.fifaRank}`;
             meta.appendChild(rankTag);
-            meta.insertAdjacentText('beforeend', ` ${team.pts}${t('pts')}`);
+            meta.insertAdjacentText('beforeend', ` ${team.pts} ${t('pts')}`);
 
             row.appendChild(nameSpan);
             row.appendChild(meta);
@@ -282,7 +313,7 @@ function renderRankingTable() {
     const grid = document.createElement('div');
     grid.className = 'ranking-grid';
 
-    entries.forEach(([team, info]) => {
+    entries.forEach(([teamEn, info]) => {
         const row = document.createElement('div');
         row.className = 'ranking-row';
 
@@ -292,11 +323,11 @@ function renderRankingTable() {
 
         const name = document.createElement('div');
         name.className = 'ranking-team';
-        name.textContent = team;
+        name.textContent = tTeam(teamEn); // nome traduzido
 
         const pts = document.createElement('div');
         pts.className = 'ranking-pts';
-        pts.textContent = `${info.points.toFixed(2)} pts`;
+        pts.textContent = `${info.points.toFixed(2)} ${t('pts')}`;
 
         row.appendChild(pos);
         row.appendChild(name);
@@ -308,70 +339,97 @@ function renderRankingTable() {
     container.appendChild(grid);
 }
 
-function updateTimestamp(source, realCount) {
+function updateTimestamp(source, realCount, hasLive) {
     const el = document.getElementById('last-updated-text');
-    const now = new Date().toLocaleString(
-        currentLang === 'pt' ? 'pt-BR' : currentLang === 'es' ? 'es-ES' : 'en-GB'
-    );
+    const localeMap = { pt: 'pt-BR', en: 'en-GB', es: 'es-ES' };
+    const now = new Date().toLocaleString(localeMap[currentLang] || 'pt-BR');
     let txt = `${t('last_updated')}: ${now}`;
     if (realCount > 0) txt += ` • ${realCount} ${t('real_integrated')}`;
+    if (hasLive)       txt += ` • 🔴 ${t('live_score')}`;
     el.textContent = txt;
 }
 
-// ---- MAIN RENDER ----
+// ── MAIN RENDER ──────────────────────────────────────────────
 function renderApp() {
     if (!cachedData) return;
 
-    const data = cachedData;
-    const live = window._liveResultsCache || null;
+    const data      = cachedData;
+    const live      = window._liveResultsCache || null;
+    const liveScores = window._liveScoresCache  || null;
 
     renderChampion(data.knockout.champion, data.source, data.realMatchesUsed);
-    renderMatchList('final-match', data.knockout.final, live);
-    renderMatchList('semi-finals', data.knockout.semiFinals, live);
-    renderMatchList('quarter-finals', data.knockout.quarterFinals, live);
-    renderMatchList('round-16', data.knockout.roundOf16, live);
-    renderMatchList('round-32', data.knockout.roundOf32, live);
+    renderMatchList('final-match',    data.knockout.final,          live, liveScores);
+    renderMatchList('semi-finals',    data.knockout.semiFinals,     live, liveScores);
+    renderMatchList('quarter-finals', data.knockout.quarterFinals,  live, liveScores);
+    renderMatchList('round-16',       data.knockout.roundOf16,      live, liveScores);
+    renderMatchList('round-32',       data.knockout.roundOf32,      live, liveScores);
     renderGroups(data.groups);
     renderRankingTable();
-    updateTimestamp(data.source, data.realMatchesUsed);
+    updateTimestamp(data.source, data.realMatchesUsed, data.hasLive);
 
+    // Atualiza elementos estáticos com data-i18n
     document.querySelectorAll('[data-i18n]').forEach(el => {
         el.textContent = t(el.getAttribute('data-i18n'));
     });
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === currentLang);
     });
+    document.title = t('title').replace(/^🏆\s*/, '') || 'Bolão Copa do Mundo 2026';
 }
 
-// ---- INIT & AUTO-REFRESH ----
+// ── REFRESH COM SIMULAÇÃO ESTÁVEL ────────────────────────────
+// A simulação só é re-executada quando o número de jogos
+// encerrados mudar — evitando que o campeão mude aleatoriamente
 async function refresh() {
     const liveSource = await getDataSource();
-    window._liveResultsCache = liveSource.data || null;
-    lastLiveSource = liveSource.source;
 
-    setStatus(liveSource.mode, liveSource.source !== 'simulation' ? liveSource.source : '');
+    window._liveResultsCache = liveSource.data       || null;
+    window._liveScoresCache  = liveSource.liveScores || null;
 
-    // Motor híbrido: usa dados reais + simula o resto
-    cachedData = runHybridSimulation(window._liveResultsCache);
-    cachedData.source = liveSource.mode;
+    const finishedCount = window._liveResultsCache
+        ? Object.keys(window._liveResultsCache).length : 0;
+    const hasLive = liveSource.hasLive || false;
+
+    setStatus(liveSource.mode,
+        liveSource.source !== 'simulation' ? liveSource.source : '',
+        hasLive);
+
+    // ── Só re-simula quando há novos jogos encerrados ──────────
+    if (finishedCount !== _lastFinishedCount || _cachedSimulation === null) {
+        console.info(`[App] 🔄 Nova simulação (${finishedCount} jogos encerrados)`);
+        _lastFinishedCount = finishedCount;
+        _cachedSimulation  = runHybridSimulation(window._liveResultsCache);
+    } else {
+        console.info(`[App] ✅ Simulação estável (${finishedCount} jogos, sem novidades)`);
+    }
+
+    // Atualiza metadados sem re-simular
+    _cachedSimulation.source   = liveSource.mode;
+    _cachedSimulation.hasLive  = hasLive;
+    cachedData = _cachedSimulation;
 
     renderApp();
+
+    // Polling adaptativo: 30s ao vivo | 3min sem jogo
+    scheduleNextRefresh(hasLive ? 30 : 180);
 }
 
+function scheduleNextRefresh(seconds) {
+    if (_pollingTimer) clearTimeout(_pollingTimer);
+    _pollingTimer = setTimeout(refresh, seconds * 1000);
+}
+
+// ── INIT ─────────────────────────────────────────────────────
 async function init() {
     await refresh();
 
-    // Mostra todas as seções
-    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('loading-state').style.display   = 'none';
     document.getElementById('champion-section').style.display = '';
     document.getElementById('knockout-section').style.display = '';
-    document.getElementById('groups-section').style.display = '';
-    document.getElementById('ranking-section').style.display = '';
+    document.getElementById('groups-section').style.display   = '';
+    document.getElementById('ranking-section').style.display  = '';
 
     renderApp();
-
-    // Auto-refresh: a cada 3 minutos durante a Copa
-    setInterval(refresh, 3 * 60 * 1000);
 }
 
 window.renderApp = renderApp;

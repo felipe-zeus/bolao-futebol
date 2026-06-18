@@ -4,41 +4,48 @@
 // CAMADA 1 (Primária):   worldcup26.ir — gratuito, sem API key
 //                        CORS aberto, dados específicos Copa 2026
 //
-// CAMADA 2 (Secundária): football-data.org — via proxy local
-//                        Requer API key gratuita + proxy Node.js
-//                        (ver /proxy/server.js para configurar)
+// CAMADA 2 (Secundária): football-data.org via proxy local na
+//                        porta 3002 — proxy já tem a API key
+//                        Acessa /wc2026/live (partidas encerradas
+//                        + em andamento separadas)
 //
 // CAMADA 3 (Fallback):   Simulação baseada no Ranking FIFA 2026
 //                        Ativada automaticamente se APIs falharem
 // ==============================================================
 
-// ── CONFIG ──────────────────────────────────────────────────────
-// Para ativar a CAMADA 2, insira sua chave gratuita de football-data.org
-// Obtenha em: https://www.football-data.org/client/register
-const FOOTBALL_DATA_API_KEY = ''; // Ex: 'abc123xyz...'
+// ── URL do Proxy ─────────────────────────────────────────────────
+// LOCAL:    http://localhost:3002  (rode node proxy/server.js)
+// PROD:     URL do Railway, injetada via public/config.js no Vercel
+//           (ver instrucoes no arquivo DEPLOY.md)
+const PROXY_URL = (typeof window !== 'undefined' && window.__PROXY_URL__)
+    ? window.__PROXY_URL__
+    : 'http://localhost:3002';
 
-// Porta do proxy local (necessário para football-data.org)
-// Execute: node proxy/server.js para iniciar o proxy
-const PROXY_PORT = 3002;
-// ────────────────────────────────────────────────────────────────
-
-// Mapeamento de nomes de times: worldcup26.ir → nosso padrão
+// Mapeamento de nomes de times: APIs externas → nosso padrão interno
 const TEAM_NAME_MAP = {
-    'United States':   'United States',
-    'USA':             'United States',
-    'US':              'United States',
-    'Ivory Coast':     'Ivory Coast',
-    "Côte d'Ivoire":   'Ivory Coast',
-    'DR Congo':        'DR Congo',
-    'Congo DR':        'DR Congo',
-    'South Korea':     'South Korea',
-    'Korea Republic':  'South Korea',
-    'Iran':            'Iran',
+    'United States':              'United States',
+    'USA':                        'United States',
+    'US':                         'United States',
+    'Ivory Coast':                'Ivory Coast',
+    "Côte d'Ivoire":              'Ivory Coast',
+    "Cote d'Ivoire":              'Ivory Coast',
+    'DR Congo':                   'DR Congo',
+    'Congo DR':                   'DR Congo',
+    'Congo, DR':                  'DR Congo',
+    'Democratic Republic of Congo': 'DR Congo',
+    'South Korea':                'South Korea',
+    'Korea Republic':             'South Korea',
+    'Republic of Korea':          'South Korea',
+    'Iran':                       'Iran',
     'Iran (Islamic Republic of)': 'Iran',
+    'IR Iran':                    'Iran',
+    'Curacao':                    'Curaçao',
+    'Cape Verde':                 'Cape Verde',
+    'Cabo Verde':                 'Cape Verde',
 };
 
 function normalizeName(name) {
-    return TEAM_NAME_MAP[name] || name;
+    return TEAM_NAME_MAP[name] || name || '';
 }
 
 // ── CAMADA 1: worldcup26.ir ─────────────────────────────────────
@@ -46,7 +53,7 @@ async function fetchFromWorldCup26() {
     try {
         const res = await fetch('https://worldcup26.ir/get/games', {
             headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(5000)
+            signal: AbortSignal.timeout(6000)
         });
 
         if (!res.ok) throw new Error(`worldcup26.ir status: ${res.status}`);
@@ -54,21 +61,18 @@ async function fetchFromWorldCup26() {
 
         if (!Array.isArray(data) || data.length === 0) return null;
 
-        // Filtra apenas partidas já encerradas (status: finished/completed)
-        const finished = data.filter(m =>
-            m.status === 'finished' ||
-            m.status === 'completed' ||
-            m.status === 'FT' ||
-            m.finished === true
-        );
+        const statusFinished = ['finished', 'completed', 'FT', 'AET', 'PEN'];
+        const statusInPlay   = ['in_play', 'live', 'LIVE', 'HT', '1H', '2H', 'ET', 'PAUSED'];
 
-        if (finished.length === 0) {
-            // Copa pode ainda não ter começado → retorna null para usar simulação
-            return null;
-        }
+        const finished = data.filter(m => statusFinished.includes(m.status) || m.finished === true);
+        const inPlay   = data.filter(m => statusInPlay.includes(m.status));
 
-        // Converte para formato interno
+        if (finished.length === 0 && inPlay.length === 0) return null;
+
         const results = {};
+        const liveScores = {};
+
+        // Processa encerrados
         finished.forEach(m => {
             const home = normalizeName(m.home_team?.name || m.home?.name || m.homeTeam || '');
             const away = normalizeName(m.away_team?.name || m.away?.name || m.awayTeam || '');
@@ -78,10 +82,34 @@ async function fetchFromWorldCup26() {
             if (!home || !away || homeScore < 0 || awayScore < 0) return;
 
             const winner = homeScore > awayScore ? home : awayScore > homeScore ? away : null;
-            results[`${home} vs ${away}`] = { winner, homeScore, awayScore, source: 'worldcup26.ir' };
+            results[`${home} vs ${away}`] = { winner, homeScore, awayScore, source: 'worldcup26.ir', status: 'finished' };
         });
 
-        return Object.keys(results).length > 0 ? { mode: 'live', source: 'worldcup26.ir', data: results } : null;
+        // Processa em andamento (placar parcial — não altera chaveamento)
+        inPlay.forEach(m => {
+            const home = normalizeName(m.home_team?.name || m.home?.name || m.homeTeam || '');
+            const away = normalizeName(m.away_team?.name || m.away?.name || m.awayTeam || '');
+            const homeScore = parseInt(m.home_score ?? m.home?.goals ?? m.homeScore ?? 0);
+            const awayScore = parseInt(m.away_score ?? m.away?.goals ?? m.awayScore ?? 0);
+            const minute   = m.minute || m.elapsed || null;
+
+            if (!home || !away) return;
+            liveScores[`${home} vs ${away}`] = {
+                homeScore, awayScore, minute,
+                status: 'in_play', source: 'worldcup26.ir'
+            };
+        });
+
+        const hasData = Object.keys(results).length > 0 || Object.keys(liveScores).length > 0;
+        if (!hasData) return null;
+
+        return {
+            mode: 'live',
+            source: 'worldcup26.ir',
+            data: results,
+            liveScores,
+            hasLive: Object.keys(liveScores).length > 0
+        };
 
     } catch (e) {
         console.warn('[Live] worldcup26.ir falhou:', e.message);
@@ -90,41 +118,63 @@ async function fetchFromWorldCup26() {
 }
 
 // ── CAMADA 2: football-data.org via Proxy Local ─────────────────
-async function fetchFromFootballDataOrg() {
-    if (!FOOTBALL_DATA_API_KEY) return null;
-
+// O proxy (proxy/server.js) já possui a API key no .env.
+// O frontend chama o proxy na porta 3002 — sem necessidade de key no cliente.
+async function fetchFromProxy() {
     try {
-        // Usa proxy local para evitar bloqueio de CORS do browser
-        const proxyUrl = `http://localhost:${PROXY_PORT}/wc2026/matches`;
+        const proxyUrl = `${PROXY_URL}/wc2026/live`;
         const res = await fetch(proxyUrl, {
-            signal: AbortSignal.timeout(5000)
+            signal: AbortSignal.timeout(6000)
         });
 
-        if (!res.ok) throw new Error(`proxy/football-data status: ${res.status}`);
+        if (!res.ok) throw new Error(`proxy status: ${res.status}`);
         const data = await res.json();
 
-        const matches = data?.matches || [];
-        const finished = matches.filter(m => m.status === 'FINISHED');
-
-        if (finished.length === 0) return null;
-
         const results = {};
-        finished.forEach(m => {
-            const home = normalizeName(m.homeTeam?.name || '');
-            const away = normalizeName(m.awayTeam?.name || '');
+        const liveScores = {};
+
+        // Partidas encerradas → resultado fixo
+        (data.finished || []).forEach(m => {
+            const home = normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || '');
+            const away = normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || '');
             const homeScore = m.score?.fullTime?.home ?? -1;
             const awayScore = m.score?.fullTime?.away ?? -1;
 
             if (!home || !away || homeScore < 0) return;
 
             const winner = homeScore > awayScore ? home : awayScore > homeScore ? away : null;
-            results[`${home} vs ${away}`] = { winner, homeScore, awayScore, source: 'football-data.org' };
+            results[`${home} vs ${away}`] = { winner, homeScore, awayScore, source: 'football-data.org', status: 'finished' };
         });
 
-        return Object.keys(results).length > 0 ? { mode: 'live', source: 'football-data.org', data: results } : null;
+        // Partidas em andamento → placar parcial
+        (data.inPlay || []).forEach(m => {
+            const home = normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || '');
+            const away = normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || '');
+            const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0;
+            const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0;
+            const minute    = m.minute || null;
+
+            if (!home || !away) return;
+            liveScores[`${home} vs ${away}`] = {
+                homeScore, awayScore, minute,
+                status: 'in_play', source: 'football-data.org'
+            };
+        });
+
+        const hasData = Object.keys(results).length > 0 || Object.keys(liveScores).length > 0;
+        if (!hasData) return null;
+
+        return {
+            mode: 'live',
+            source: 'football-data.org',
+            data: results,
+            liveScores,
+            hasLive: data.hasLive || Object.keys(liveScores).length > 0,
+            nextMatch: data.nextMatch || null
+        };
 
     } catch (e) {
-        console.warn('[Live] football-data.org proxy falhou:', e.message);
+        console.warn('[Live] Proxy football-data.org falhou:', e.message);
         return null;
     }
 }
@@ -134,24 +184,24 @@ async function getDataSource() {
     // Tenta Camada 1
     const layer1 = await fetchFromWorldCup26();
     if (layer1) {
-        console.info(`[Live] ✅ Dados ao vivo: ${layer1.source} (${Object.keys(layer1.data).length} partidas)`);
+        const total = Object.keys(layer1.data).length + Object.keys(layer1.liveScores).length;
+        console.info(`[Live] ✅ ${layer1.source}: ${Object.keys(layer1.data).length} encerradas, ${Object.keys(layer1.liveScores).length} ao vivo`);
         return layer1;
     }
 
-    // Tenta Camada 2
-    const layer2 = await fetchFromFootballDataOrg();
+    // Tenta Camada 2 (proxy local)
+    const layer2 = await fetchFromProxy();
     if (layer2) {
-        console.info(`[Live] ✅ Dados ao vivo: ${layer2.source} (${Object.keys(layer2.data).length} partidas)`);
+        console.info(`[Live] ✅ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
         return layer2;
     }
 
     // Fallback: simulação
     console.info('[Live] 🔵 Modo Simulação — APIs indisponíveis ou Copa ainda não iniciada.');
-    return { mode: 'simulation', source: 'simulation', data: null };
+    return { mode: 'simulation', source: 'simulation', data: null, liveScores: {}, hasLive: false };
 }
 
 // ── STATUS PÚBLICO ───────────────────────────────────────────────
-// Exporta a última fonte conhecida para exibição na UI
 window.liveDataSource = null;
 const _originalGetDataSource = getDataSource;
 window.getDataSource = async function () {

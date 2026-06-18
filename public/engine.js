@@ -80,10 +80,9 @@ const WORLD_CUP_2026_GROUPS = {
     "L": ["England", "Croatia", "Ghana", "Panama"],
 };
 
-// Pontuação FIFA → determina a força para cálculo de probabilidade
+// Pontuação FIFA base (snapshot Abril 2026)
 function getFifaPoints(teamName) {
     const entry = FIFA_RANKINGS[teamName];
-    // Fallback: times sem ranking oficial recebem 1100 pts
     return entry ? entry.points : 1100;
 }
 
@@ -92,16 +91,80 @@ function getFifaRank(teamName) {
     return entry ? entry.rank : 99;
 }
 
-// Probabilidade de vitória usando Elo-style (baseado no ranking FIFA)
-function winProbability(teamA, teamB) {
-    const ptsA = getFifaPoints(teamA);
-    const ptsB = getFifaPoints(teamB);
+// ── ELO DINÂMICO ──────────────────────────────────────────────
+// Recalcula os pontos de cada seleção após cada resultado real.
+// Fórmula FIFA: ΔPts = K × (W − We)
+//   K  = 60 (peso Copa do Mundo — máximo na escala FIFA)
+//   W  = resultado real:  1 = vitória, 0.5 = empate, 0 = derrota
+//   We = probabilidade esperada (winProbability com pontos atuais)
+//
+// Resultado: seleções que surpreenderam (ex: zebra) sobem bastante;
+// favoritas que perderam caem — afetando a simulação dos próximos jogos.
+function computeDynamicElo(realResults) {
+    // Copia os pontos base para não modificar FIFA_RANKINGS original
+    const dynPts = {};
+    for (const [team, info] of Object.entries(FIFA_RANKINGS)) {
+        dynPts[team] = info.points;
+    }
+
+    if (!realResults) return dynPts;
+
+    const K = 60; // Copa do Mundo
+
+    for (const [matchKey, result] of Object.entries(realResults)) {
+        if (result.homeScore < 0 || result.awayScore < 0) continue;
+
+        const [home, away] = matchKey.split(' vs ');
+        if (!home || !away) continue;
+
+        const ptsHome = dynPts[home] ?? 1100;
+        const ptsAway = dynPts[away] ?? 1100;
+
+        // Probabilidade esperada do mandante vencer
+        const We_home = 1 / (1 + Math.pow(10, (ptsAway - ptsHome) / 600));
+        const We_away = 1 - We_home;
+
+        // Resultado real
+        let W_home, W_away;
+        if (result.homeScore > result.awayScore)      { W_home = 1;   W_away = 0;   }
+        else if (result.homeScore < result.awayScore) { W_home = 0;   W_away = 1;   }
+        else                                           { W_home = 0.5; W_away = 0.5; }
+
+        // Aplica atualização Elo
+        dynPts[home] = ptsHome + K * (W_home - We_home);
+        dynPts[away] = ptsAway + K * (W_away - We_away);
+    }
+
+    return dynPts;
+}
+
+// Probabilidade usando pontos dinâmicos (pós resultados reais)
+function winProbabilityDynamic(teamA, teamB, dynPts) {
+    const ptsA = dynPts?.[teamA] ?? getFifaPoints(teamA);
+    const ptsB = dynPts?.[teamB] ?? getFifaPoints(teamB);
     return 1 / (1 + Math.pow(10, (ptsB - ptsA) / 600));
 }
 
+// Probabilidade usando ranking estático (fallback / legacy)
+function winProbability(teamA, teamB) {
+    return winProbabilityDynamic(teamA, teamB, null);
+}
+
+// ── SIMULAÇÃO DETERMINÍSTICA ───────────────────────────────────
+// Sem aleatoriedade: quem tem maior probabilidade SEMPRE vence.
+// Se prob(A) >= 0.5 → A vence | Se prob(A) < 0.5 → B vence
+// Em caso de empate perfeito (50/50) → considerado empate técnico
+function simulateMatchDeterministic(teamA, teamB, dynPts) {
+    const probA = winProbabilityDynamic(teamA, teamB, dynPts);
+    if (probA > 0.5)  return teamA;
+    if (probA < 0.5)  return teamB;
+    // Empate perfeito (improvável) → favorece ranking base
+    return getFifaPoints(teamA) >= getFifaPoints(teamB) ? teamA : teamB;
+}
+
+// Mantém função legada para compatibilidade com runSimulation() de engine.js
 function simulateMatch(teamA, teamB) {
-    const probA = winProbability(teamA, teamB);
-    return Math.random() < probA ? teamA : teamB;
+    return simulateMatchDeterministic(teamA, teamB, null);
 }
 
 function simulateGroupStage() {
@@ -148,23 +211,25 @@ function runSimulation() {
     thirdPlaceTeams.sort((a, b) => b.pts - a.pts || b.fifaPoints - a.fifaPoints);
     const best8Third = thirdPlaceTeams.slice(0, 8);
 
-    // Build Round of 32 bracket (simplified bracket seeding)
+    // Round of 32 — 16 partidas (32 times)
     const groupLetters = Object.keys(WORLD_CUP_2026_GROUPS);
     const r32Matches = [];
     const r32Winners = [];
 
-    // 12 winners vs 12 runners-up + 8 best 3rds (simplified pairing)
-    for (let i = 0; i < 6; i++) {
-        const w = groupWinners[groupLetters[i]].name;
+    // Partidas 1-12: campeão do grupo i vs vice do grupo 11-i
+    for (let i = 0; i < 12; i++) {
+        const w  = groupWinners[groupLetters[i]].name;
         const ru = groupRunnersUp[groupLetters[11 - i]].name;
         r32Matches.push(`${w} vs ${ru}`);
         r32Winners.push(simulateMatch(w, ru));
     }
-    for (let i = 6; i < 12; i++) {
-        const w = groupWinners[groupLetters[i]].name;
-        const t3 = best8Third[i - 6]?.name || groupRunnersUp[groupLetters[i - 6]].name;
-        r32Matches.push(`${w} vs ${t3}`);
-        r32Winners.push(simulateMatch(w, t3));
+
+    // Partidas 13-16: os 8 melhores 3ºs lugares entre si
+    for (let i = 0; i < 4; i++) {
+        const a = best8Third[i]?.name     || groupRunnersUp[groupLetters[i]].name;
+        const b = best8Third[i + 4]?.name || groupRunnersUp[groupLetters[i + 6]].name;
+        r32Matches.push(`${a} vs ${b}`);
+        r32Winners.push(simulateMatch(a, b));
     }
 
     // Round of 16
