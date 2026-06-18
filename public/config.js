@@ -11,4 +11,4 @@
 //   Painel Railway → seu projeto → Settings → Networking → Domain
 // ================================================================
 
-window.__PROXY_URL__ = 'https://SEU-PROXY.railway.app'; // ← substitua aqui
+window.__PROXY_URL__ = 'https://bolao-futebol-production.up.railway.app'; // ← URL do Railway do Felipe
