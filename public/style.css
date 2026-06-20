@@ -370,7 +370,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 /* --- Groups --- */
 .groups-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
 }
 
@@ -660,26 +660,27 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 ════════════════════════════════════════════════════════ */
 .group-card--detailed {
     min-width: 0;
+    overflow: hidden;
 }
 
 .group-table-header {
     display: grid;
-    grid-template-columns: 1fr repeat(8, 2rem);
-    gap: 0.2rem;
+    grid-template-columns: minmax(90px, 1.5fr) repeat(8, 1.4rem);
+    gap: 0.15rem;
     padding: 0.4rem 0.5rem;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     margin-bottom: 0.3rem;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 700;
     color: var(--text-dim);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
 }
 
 .group-team--detailed {
     display: grid !important;
-    grid-template-columns: 1fr repeat(8, 2rem) !important;
-    gap: 0.2rem;
+    grid-template-columns: minmax(90px, 1.5fr) repeat(8, 1.4rem) !important;
+    gap: 0.15rem;
     padding: 0.5rem 0.5rem;
     align-items: center;
     border-radius: 0.4rem;
@@ -693,17 +694,18 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 .col-team {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-weight: 600;
-    font-size: 0.82rem;
-    white-space: nowrap;
+    gap: 0.35rem;
+    font-weight: 700;
+    font-size: 0.78rem;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .col-stat {
     text-align: center;
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-dim);
 }
@@ -727,19 +729,36 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     background: rgba(0, 156, 59, 0.07) !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+    /* Em telas menores, remove GP/GC/SG para dar mais espaço ao nome */
     .group-table-header {
-        grid-template-columns: 1fr repeat(4, 2rem);
+        grid-template-columns: minmax(80px, 1.5fr) repeat(5, 1.4rem);
+    }
+    .group-table-header .col-stat:nth-child(n+7) {
+        display: none;
+    }
+    .group-team--detailed {
+        grid-template-columns: minmax(80px, 1.5fr) repeat(5, 1.4rem) !important;
+    }
+    .group-team--detailed .col-stat:nth-child(n+8) {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .group-table-header {
+        grid-template-columns: minmax(70px, 1fr) repeat(4, 1.4rem);
     }
     .group-table-header .col-stat:nth-child(n+6) {
         display: none;
     }
     .group-team--detailed {
-        grid-template-columns: 1fr repeat(4, 2rem) !important;
+        grid-template-columns: minmax(70px, 1fr) repeat(4, 1.4rem) !important;
     }
     .group-team--detailed .col-stat:nth-child(n+7) {
         display: none;
     }
     .group-progress-bar { padding: 1rem; }
     .progress-label { font-size: 1rem; }
+    .groups-grid { grid-template-columns: 1fr; }
 }
