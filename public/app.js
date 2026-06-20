@@ -489,6 +489,9 @@ function renderApp() {
         btn.classList.toggle('active', btn.dataset.lang === currentLang);
     });
     document.title = t('title').replace(/^🏆\s*/, '') || 'Bolão Copa do Mundo 2026';
+
+    // RENDERIZA JOGOS AO VIVO
+    renderLiveMatches(window._liveScoresCache, data.groups);
 }
 
 // ── REFRESH COM SIMULAÇÃO CONDICIONAL ────────────────────────────────
@@ -638,3 +641,75 @@ document.addEventListener('DOMContentLoaded', () => {
     setLang(currentLang);
     init();
 });
+
+// ── RENDER LIVE MATCHES ──────────────────────────────────────
+function renderLiveMatches(liveScores, groups) {
+    const sec = document.getElementById('live-matches-section');
+    if (!sec) return;
+    
+    if (!liveScores || Object.keys(liveScores).length === 0) {
+        sec.style.display = 'none';
+        return;
+    }
+    
+    sec.style.display = '';
+    sec.innerHTML = '';
+    
+    Object.entries(liveScores).forEach(([key, m]) => {
+        const parts = key.split(' vs ');
+        const homeName = parts[0];
+        const awayName = parts[1];
+        let groupName = 'Copa';
+        let homeRankPos = '';
+        let awayRankPos = '';
+        if (groups) {
+            const g = groups.find(x => x.standings.some(s => s.name === homeName));
+            if (g) {
+                groupName = t('groups') + ' · ' + g.name;
+                const hs = g.standings.find(s => s.name === homeName);
+                const as = g.standings.find(s => s.name === awayName);
+                if (hs) homeRankPos = (g.standings.indexOf(hs) + 1) + 'º';
+                if (as) awayRankPos = (g.standings.indexOf(as) + 1) + 'º';
+            }
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'live-match-widget';
+        
+        const homeScorersHtml = (m.homeScorers || []).map(s => `<div>${s}</div>`).join('');
+        const awayScorersHtml = (m.awayScorers || []).map(s => `<div>${s}</div>`).join('');
+        
+        card.innerHTML = `
+            <div class="lm-header">
+                <div class="lm-title">Copa do Mundo da FIFA 2026™</div>
+                <div class="lm-time">${m.minute ? m.minute : ''}</div>
+            </div>
+            <div class="lm-content">
+                <div class="lm-team lm-home">
+                    <img src="flags/${tTeam(homeName).toLowerCase().replace(/ /g, '-')}.svg" onerror="this.src='flags/default.svg'" class="lm-flag">
+                    <div class="lm-name">${tTeam(homeName)}</div>
+                    <div class="lm-pos">${homeRankPos}</div>
+                </div>
+                <div class="lm-score-box">
+                    <span class="lm-score">${m.homeScore}</span>
+                    <span class="lm-vs">×</span>
+                    <span class="lm-score">${m.awayScore}</span>
+                </div>
+                <div class="lm-team lm-away">
+                    <img src="flags/${tTeam(awayName).toLowerCase().replace(/ /g, '-')}.svg" onerror="this.src='flags/default.svg'" class="lm-flag">
+                    <div class="lm-name">${tTeam(awayName)}</div>
+                    <div class="lm-pos">${awayRankPos}</div>
+                </div>
+            </div>
+            <div class="lm-group">${groupName}</div>
+            ${(homeScorersHtml || awayScorersHtml) ? `
+            <div class="lm-scorers">
+                <div class="lm-scorers-home">${homeScorersHtml}</div>
+                <div class="lm-scorers-icon">⚽</div>
+                <div class="lm-scorers-away">${awayScorersHtml}</div>
+            </div>
+            ` : ''}
+        `;
+        sec.appendChild(card);
+    });
+}
