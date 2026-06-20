@@ -59,61 +59,85 @@ function normalizeName(name) {
     return TEAM_NAME_MAP[name] || name || '';
 }
 
-// ── CAMADA 1: worldcup26.ir ─────────────────────────────────────
+// ── CAMADA 1: worldcup26.ir ───────────────────────────────────────────
+const WORLDCUP26_URL = 'https://worldcup26.ir';
+
 async function fetchFromWorldCup26() {
     try {
-        const res = await fetch('https://worldcup26.ir/get/games', {
+        const res = await fetch(`${WORLDCUP26_URL}/get/games`, {
             headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(6000)
+            signal: AbortSignal.timeout(8000)
         });
 
-        if (!res.ok) throw new Error(`worldcup26.ir status: ${res.status}`);
-        const data = await res.json();
+        if (!res.ok) throw new Error(`worldcup26.ir /get/games status: ${res.status}`);
+        const payload = await res.json();
 
-        if (!Array.isArray(data) || data.length === 0) return null;
+        // A API retorna { games: [...] } ou diretamente um array
+        const data = Array.isArray(payload) ? payload : (payload.games || []);
+        if (data.length === 0) return null;
 
-        const statusFinished = ['finished', 'completed', 'FT', 'AET', 'PEN'];
-        const statusInPlay   = ['in_play', 'live', 'LIVE', 'HT', '1H', '2H', 'ET', 'PAUSED'];
+        // Detecta status encerrado:
+        // finished: "TRUE" (string) OU time_elapsed em lista de encerrados
+        const statusFinished = ['finished', 'Finished', 'FINISHED', 'completed', 'FT', 'AET', 'PEN'];
+        const statusInPlay   = ['in_play', 'live', 'LIVE', 'HT', '1H', '2H', 'ET', 'PAUSED', 'inprogress'];
 
-        const finished = data.filter(m => statusFinished.includes(m.status) || m.finished === true);
-        const inPlay   = data.filter(m => statusInPlay.includes(m.status));
+        const finished = data.filter(m =>
+            m.type === 'group' && (
+                String(m.finished).toUpperCase() === 'TRUE' ||
+                statusFinished.includes(m.time_elapsed)
+            )
+        );
+
+        const inPlay = data.filter(m =>
+            m.type === 'group' && (
+                statusInPlay.includes(m.time_elapsed) ||
+                statusInPlay.includes(m.status)
+            )
+        );
 
         if (finished.length === 0 && inPlay.length === 0) return null;
 
-        const results = {};
+        const results    = {};
         const liveScores = {};
 
-        // Processa encerrados
+        // Processa jogos encerrados
+        // A API usa: home_team_name_en, away_team_name_en, home_score, away_score (strings)
         finished.forEach(m => {
-            const home = normalizeName(m.home_team?.name || m.home?.name || m.homeTeam || '');
-            const away = normalizeName(m.away_team?.name || m.away?.name || m.awayTeam || '');
-            const homeScore = parseInt(m.home_score ?? m.home?.goals ?? m.homeScore ?? -1);
-            const awayScore = parseInt(m.away_score ?? m.away?.goals ?? m.awayScore ?? -1);
+            const home      = normalizeName(m.home_team_name_en || m.home_team?.name || m.home?.name || '');
+            const away      = normalizeName(m.away_team_name_en || m.away_team?.name || m.away?.name || '');
+            const homeScore = parseInt(m.home_score ?? m.home_goals ?? -1);
+            const awayScore = parseInt(m.away_score ?? m.away_goals ?? -1);
 
-            if (!home || !away || homeScore < 0 || awayScore < 0) return;
+            if (!home || !away || isNaN(homeScore) || isNaN(awayScore) || homeScore < 0 || awayScore < 0) return;
 
             const winner = homeScore > awayScore ? home : awayScore > homeScore ? away : null;
-            results[`${home} vs ${away}`] = { winner, homeScore, awayScore, source: 'worldcup26.ir', status: 'finished' };
+            results[`${home} vs ${away}`] = {
+                winner, homeScore, awayScore,
+                source: 'worldcup26.ir',
+                status: 'finished'
+            };
         });
 
-        // Processa em andamento (placar parcial — não altera chaveamento)
+        // Processa jogos em andamento (placar parcial)
         inPlay.forEach(m => {
-            const home = normalizeName(m.home_team?.name || m.home?.name || m.homeTeam || '');
-            const away = normalizeName(m.away_team?.name || m.away?.name || m.awayTeam || '');
-            const homeScore = parseInt(m.home_score ?? m.home?.goals ?? m.homeScore ?? 0);
-            const awayScore = parseInt(m.away_score ?? m.away?.goals ?? m.awayScore ?? 0);
-            const minute   = m.minute || m.elapsed || null;
+            const home      = normalizeName(m.home_team_name_en || m.home_team?.name || m.home?.name || '');
+            const away      = normalizeName(m.away_team_name_en || m.away_team?.name || m.away?.name || '');
+            const homeScore = parseInt(m.home_score ?? 0);
+            const awayScore = parseInt(m.away_score ?? 0);
+            const minute    = m.time_elapsed || m.minute || m.elapsed || null;
 
             if (!home || !away) return;
             liveScores[`${home} vs ${away}`] = {
                 homeScore, awayScore, minute,
-                status: 'in_play', source: 'worldcup26.ir'
+                status: 'in_play',
+                source: 'worldcup26.ir'
             };
         });
 
         const hasData = Object.keys(results).length > 0 || Object.keys(liveScores).length > 0;
         if (!hasData) return null;
 
+        console.info(`[worldcup26.ir] ✔ ${Object.keys(results).length} encerrados, ${Object.keys(liveScores).length} ao vivo`);
         return {
             mode: 'live',
             source: 'worldcup26.ir',
