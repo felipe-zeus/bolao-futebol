@@ -113,7 +113,7 @@ app.get('/wc2026/live-minute', async (req, res) => {
         
         // Simulação da quebra de layout para exibir o aviso solicitado:
         // Caso queiramos testar a quebra, basta mudar a flag abaixo
-        const isLayoutBroken = false; 
+        const isLayoutBroken = true; 
         
         if (isLayoutBroken) {
             // Simula falha ao não encontrar o seletor na página HTML

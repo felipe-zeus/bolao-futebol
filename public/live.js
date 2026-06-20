@@ -170,7 +170,27 @@ async function fetchFromWorldCup26() {
             const away      = normalizeName(m.away_team_name_en || m.away_team?.name || m.away?.name || '');
             const homeScore = parseInt(m.home_score ?? 0);
             const awayScore = parseInt(m.away_score ?? 0);
-            const minute    = exactMinute || m.time_elapsed || m.minute || m.elapsed || null;
+            
+            // Fallback Matemático
+            let mathMinute = null;
+            if (hasScraperError && m.local_date) {
+                const start = new Date(m.local_date).getTime();
+                const now = new Date().getTime();
+                const diffMins = Math.floor((now - start) / 60000);
+                if (diffMins >= 0) {
+                    if (diffMins <= 45) {
+                        mathMinute = `${diffMins}'`;
+                    } else if (diffMins > 45 && diffMins <= 60) {
+                        mathMinute = `HT`; // Intervalo
+                    } else if (diffMins > 60 && diffMins <= 105) {
+                        mathMinute = `${diffMins - 15}'`;
+                    } else {
+                        mathMinute = `90+'`;
+                    }
+                }
+            }
+            
+            const minute    = exactMinute || mathMinute || m.time_elapsed || m.minute || m.elapsed || null;
             const homeScorers = parseScorers(m.home_scorers);
             const awayScorers = parseScorers(m.away_scorers);
 
