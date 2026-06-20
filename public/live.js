@@ -66,7 +66,7 @@ async function fetchFromWorldCup26() {
     try {
         const res = await fetch(`${WORLDCUP26_URL}/get/games`, {
             headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(8000)
+            signal: AbortSignal.timeout(30000)
         });
 
         if (!res.ok) throw new Error(`worldcup26.ir /get/games status: ${res.status}`);
@@ -214,6 +214,9 @@ async function fetchFromProxy() {
     }
 }
 
+// ── FALLBACK ESTATICO ──────────────────────────────────────────
+const FALLBACK_RESULTS = {"Mexico vs South Africa":{"winner":"Mexico","homeScore":2,"awayScore":0,"source":"fallback","status":"finished"},"South Korea vs Czech Republic":{"winner":"South Korea","homeScore":2,"awayScore":1,"source":"fallback","status":"finished"},"Canada vs Bosnia and Herzegovina":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"United States vs Paraguay":{"winner":"United States","homeScore":4,"awayScore":1,"source":"fallback","status":"finished"},"Haiti vs Scotland":{"winner":"Scotland","homeScore":0,"awayScore":1,"source":"fallback","status":"finished"},"Australia vs Turkey":{"winner":"Australia","homeScore":2,"awayScore":0,"source":"fallback","status":"finished"},"Brazil vs Morocco":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Qatar vs Switzerland":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Ivory Coast vs Ecuador":{"winner":"Ivory Coast","homeScore":1,"awayScore":0,"source":"fallback","status":"finished"},"Germany vs Curaçao":{"winner":"Germany","homeScore":7,"awayScore":1,"source":"fallback","status":"finished"},"Netherlands vs Japan":{"winner":null,"homeScore":2,"awayScore":2,"source":"fallback","status":"finished"},"Sweden vs Tunisia":{"winner":"Sweden","homeScore":5,"awayScore":1,"source":"fallback","status":"finished"},"Iran vs New Zealand":{"winner":null,"homeScore":2,"awayScore":2,"source":"fallback","status":"finished"},"Spain vs Cape Verde":{"winner":null,"homeScore":0,"awayScore":0,"source":"fallback","status":"finished"},"Belgium vs Egypt":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Saudi Arabia vs Uruguay":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"France vs Senegal":{"winner":"France","homeScore":3,"awayScore":1,"source":"fallback","status":"finished"},"Iraq vs Norway":{"winner":"Norway","homeScore":1,"awayScore":4,"source":"fallback","status":"finished"},"Argentina vs Algeria":{"winner":"Argentina","homeScore":3,"awayScore":0,"source":"fallback","status":"finished"},"Austria vs Jordan":{"winner":"Austria","homeScore":3,"awayScore":1,"source":"fallback","status":"finished"},"Portugal vs Democratic Republic of the Congo":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"England vs Croatia":{"winner":"England","homeScore":4,"awayScore":2,"source":"fallback","status":"finished"},"Uzbekistan vs Colombia":{"winner":"Colombia","homeScore":1,"awayScore":3,"source":"fallback","status":"finished"},"Ghana vs Panama":{"winner":"Ghana","homeScore":1,"awayScore":0,"source":"fallback","status":"finished"},"Mexico vs South Korea":{"winner":"Mexico","homeScore":1,"awayScore":0,"source":"fallback","status":"finished"},"Switzerland vs Bosnia and Herzegovina":{"winner":"Switzerland","homeScore":4,"awayScore":1,"source":"fallback","status":"finished"},"Canada vs Qatar":{"winner":"Canada","homeScore":6,"awayScore":0,"source":"fallback","status":"finished"},"Czech Republic vs South Africa":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Scotland vs Morocco":{"winner":"Morocco","homeScore":0,"awayScore":1,"source":"fallback","status":"finished"},"United States vs Australia":{"winner":"United States","homeScore":2,"awayScore":0,"source":"fallback","status":"finished"}};
+
 // ── ORQUESTRADOR PRINCIPAL ──────────────────────────────────────
 async function getDataSource() {
     // Tenta Camada 1
@@ -231,9 +234,9 @@ async function getDataSource() {
         return layer2;
     }
 
-    // Fallback: simulação
-    console.info('[Live] 🔵 Modo Simulação — APIs indisponíveis ou Copa ainda não iniciada.');
-    return { mode: 'simulation', source: 'simulation', data: null, liveScores: {}, hasLive: false };
+    // Fallback: Backup Estático + Simulação
+    console.info('[Live] 🔵 Modo Backup Estático — APIs indisponíveis, usando cache de 30 jogos.');
+    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: {}, hasLive: false };
 }
 
 // ── STATUS PÚBLICO ───────────────────────────────────────────────
