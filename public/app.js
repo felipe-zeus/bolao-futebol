@@ -12,6 +12,12 @@
 //   6. Traduções dinâmicas completas via tTeam() + t()
 // ==============================================================
 
+const NEXT_MATCH = {
+    home: 'Turkey',
+    away: 'Paraguay',
+    time: 'Hoje, 21:00'
+};
+
 let cachedData = null;
 let _pollingTimer = null;
 let _countdownTimer = null;
@@ -512,8 +518,57 @@ function renderApp() {
     });
     document.title = t('title').replace(/^🏆\s*/, '') || 'Bolão Copa do Mundo 2026';
 
-    // RENDERIZA JOGOS AO VIVO
+    // RENDERIZA JOGOS AO VIVO E PREVIEW
     renderLiveMatches(window._liveScoresCache, data.groups);
+    renderNextMatchPreview();
+}
+
+function renderNextMatchPreview() {
+    const sec = document.getElementById('next-match-section');
+    if (!sec || !NEXT_MATCH) return;
+
+    sec.style.display = '';
+    sec.innerHTML = '';
+
+    const ISO_MAP = {
+        "France":"fr","Spain":"es","Argentina":"ar","England":"gb-eng","Portugal":"pt",
+        "Brazil":"br","Netherlands":"nl","Morocco":"ma","Belgium":"be","Germany":"de",
+        "Croatia":"hr","Colombia":"co","Senegal":"sn","Mexico":"mx","United States":"us",
+        "Uruguay":"uy","Japan":"jp","Switzerland":"ch","Austria":"at","Ecuador":"ec",
+        "South Korea":"kr","Tunisia":"tn","Sweden":"se","Egypt":"eg","Iran":"ir",
+        "Australia":"au","Canada":"ca","Czech Republic":"cz","Algeria":"dz","Scotland":"gb-sct",
+        "Turkey":"tr","Panama":"pa","Saudi Arabia":"sa","Qatar":"qa","Ivory Coast":"ci",
+        "Iraq":"iq","Paraguay":"py","South Africa":"za","Ghana":"gh","Bosnia and Herzegovina":"ba",
+        "Cape Verde":"cv","New Zealand":"nz","Jordan":"jo","Democratic Republic of the Congo":"cd",
+        "Norway":"no","Curaçao":"cw","Uzbekistan":"uz","Haiti":"ht"
+    };
+
+    const homeFlag = ISO_MAP[NEXT_MATCH.home] ? `https://flagcdn.com/w80/${ISO_MAP[NEXT_MATCH.home]}.png` : 'flags/default.svg';
+    const awayFlag = ISO_MAP[NEXT_MATCH.away] ? `https://flagcdn.com/w80/${ISO_MAP[NEXT_MATCH.away]}.png` : 'flags/default.svg';
+
+    const card = document.createElement('div');
+    card.className = 'next-match-widget';
+    card.innerHTML = `
+        <div class="nm-header">
+            <span class="nm-pulse"></span>
+            <span class="nm-title">PRÓXIMO JOGO</span>
+        </div>
+        <div class="nm-content">
+            <div class="nm-team">
+                <img src="${homeFlag}" class="nm-flag" alt="${tTeam(NEXT_MATCH.home)}">
+                <div class="nm-name">${tTeam(NEXT_MATCH.home)}</div>
+            </div>
+            <div class="nm-vs">
+                <div class="nm-vs-text">VS</div>
+                <div class="nm-time">${NEXT_MATCH.time}</div>
+            </div>
+            <div class="nm-team">
+                <img src="${awayFlag}" class="nm-flag" alt="${tTeam(NEXT_MATCH.away)}">
+                <div class="nm-name">${tTeam(NEXT_MATCH.away)}</div>
+            </div>
+        </div>
+    `;
+    sec.appendChild(card);
 }
 
 // ── REFRESH COM SIMULAÇÃO CONDICIONAL ────────────────────────────────

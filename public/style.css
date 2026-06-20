@@ -917,3 +917,120 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     font-size: 0.9rem;
     opacity: 0.5;
 }
+
+/* ════════════════════════════════════════════════════════
+   WIDGET: PRÓXIMO JOGO (HYPE PREVIEW)
+════════════════════════════════════════════════════════ */
+.next-match-widget {
+    background: linear-gradient(135deg, rgba(20,20,30,0.8), rgba(10,10,15,0.9));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+    position: relative;
+    overflow: hidden;
+    animation: fade-in 0.8s ease-out;
+}
+
+/* Subtle glow effect around the card */
+.next-match-widget::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.5), transparent);
+    opacity: 0.7;
+}
+
+.nm-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+}
+
+.nm-pulse {
+    width: 8px;
+    height: 8px;
+    background-color: #ffd700;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+.nm-title {
+    color: #ffd700;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.nm-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.nm-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    flex: 1;
+}
+
+.nm-flag {
+    width: 70px;
+    height: auto;
+    border-radius: 0.3rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    transition: transform 0.3s ease;
+}
+
+.nm-flag:hover {
+    transform: scale(1.05);
+}
+
+.nm-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-main);
+}
+
+.nm-vs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.nm-vs-text {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: rgba(255,255,255,0.1);
+    font-style: italic;
+    letter-spacing: 2px;
+}
+
+.nm-time {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.3rem 0.8rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
+    border: 1px solid rgba(255,255,255,0.05);
+}
