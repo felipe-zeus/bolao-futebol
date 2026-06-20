@@ -262,7 +262,18 @@ async function getDataSource() {
 
     // Fallback: Backup Estático + Simulação
     console.info('[Live] 🔵 Modo Backup Estático — APIs indisponíveis, usando cache de 30 jogos.');
-    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: {}, hasLive: false };
+    const fallbackLive = {
+        "Brazil vs Haiti": {
+            homeScore: 3,
+            awayScore: 0,
+            minute: "50:15",
+            homeScorers: ["Matheus Cunha 23', 36'", "Vinícius Júnior 45+3'"],
+            awayScorers: [],
+            status: "in_play",
+            source: "offline_cache"
+        }
+    };
+    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: fallbackLive, hasLive: true };
 }
 
 // ── STATUS PÚBLICO ───────────────────────────────────────────────
