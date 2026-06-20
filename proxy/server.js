@@ -15,9 +15,29 @@ const app = express();
 const PORT = process.env.PORT || process.env.PROXY_PORT || 3002;
 const API_KEY = process.env.FOOTBALL_DATA_KEY || '';
 
-// CORS — permite chamadas do frontend local
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+// ── 1. Secure Headers (Helmet) ─────────────────────────────────
+app.use(helmet());
+
+// ── 2. Rate Limiting (Bloqueio de DDoS) ────────────────────────
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minuto
+    max: 60, // Limita cada IP a 60 requisições por `window` (por minuto)
+    standardHeaders: true, 
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' }
+});
+app.use(limiter);
+
+// ── 3. CORS Restrito ───────────────────────────────────────────
+const allowedOrigins = ['https://bolao-futebol-rosy.vercel.app', 'http://localhost:3001', 'http://localhost:3000'];
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
 });

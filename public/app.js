@@ -26,6 +26,20 @@ let _cachedSimulation  = null;
 // Controle de fase: mata-mata só liberado após fase de grupos completa
 let _groupStageWasComplete = false;
 
+// ── SECURITY ──────────────────────────────────────────────────
+function escapeHTML(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
+
 // ── UTILITY ───────────────────────────────────────────────────
 
 // Formata uma partida com placar (encerrado ou ao vivo)
@@ -690,10 +704,10 @@ function renderLiveMatches(liveScores, groups) {
         const card = document.createElement('div');
         card.className = 'live-match-widget';
         
-        const homeScorersHtml = (m.homeScorers || []).map(s => `<div>${s}</div>`).join('');
-        const awayScorersHtml = (m.awayScorers || []).map(s => `<div>${s}</div>`).join('');
+        const homeScorersHtml = (m.homeScorers || []).map(s => `<div>${escapeHTML(s)}</div>`).join('');
+        const awayScorersHtml = (m.awayScorers || []).map(s => `<div>${escapeHTML(s)}</div>`).join('');
         
-        let displayTime = m.minute ? m.minute : '';
+        let displayTime = m.minute ? escapeHTML(m.minute) : '';
         if (displayTime.toLowerCase() === 'live') displayTime = '🔴 ' + t('live_score');
 
         const homeFlag = ISO_MAP[homeName] ? `https://flagcdn.com/w80/${ISO_MAP[homeName]}.png` : 'flags/default.svg';
