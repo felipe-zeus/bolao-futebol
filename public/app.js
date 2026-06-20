@@ -655,6 +655,19 @@ function renderLiveMatches(liveScores, groups) {
     sec.style.display = '';
     sec.innerHTML = '';
     
+    const ISO_MAP = {
+        "France":"fr","Spain":"es","Argentina":"ar","England":"gb-eng","Portugal":"pt",
+        "Brazil":"br","Netherlands":"nl","Morocco":"ma","Belgium":"be","Germany":"de",
+        "Croatia":"hr","Colombia":"co","Senegal":"sn","Mexico":"mx","United States":"us",
+        "Uruguay":"uy","Japan":"jp","Switzerland":"ch","Austria":"at","Ecuador":"ec",
+        "South Korea":"kr","Tunisia":"tn","Sweden":"se","Egypt":"eg","Iran":"ir",
+        "Australia":"au","Canada":"ca","Czech Republic":"cz","Algeria":"dz","Scotland":"gb-sct",
+        "Turkey":"tr","Panama":"pa","Saudi Arabia":"sa","Qatar":"qa","Ivory Coast":"ci",
+        "Iraq":"iq","Paraguay":"py","South Africa":"za","Ghana":"gh","Bosnia and Herzegovina":"ba",
+        "Cape Verde":"cv","New Zealand":"nz","Jordan":"jo","Democratic Republic of the Congo":"cd",
+        "Norway":"no","Curaçao":"cw","Uzbekistan":"uz","Haiti":"ht"
+    };
+
     Object.entries(liveScores).forEach(([key, m]) => {
         const parts = key.split(' vs ');
         const homeName = parts[0];
@@ -679,14 +692,20 @@ function renderLiveMatches(liveScores, groups) {
         const homeScorersHtml = (m.homeScorers || []).map(s => `<div>${s}</div>`).join('');
         const awayScorersHtml = (m.awayScorers || []).map(s => `<div>${s}</div>`).join('');
         
+        let displayTime = m.minute ? m.minute : '';
+        if (displayTime.toLowerCase() === 'live') displayTime = '🔴 ' + t('live_score');
+
+        const homeFlag = ISO_MAP[homeName] ? `https://flagcdn.com/w80/${ISO_MAP[homeName]}.png` : 'flags/default.svg';
+        const awayFlag = ISO_MAP[awayName] ? `https://flagcdn.com/w80/${ISO_MAP[awayName]}.png` : 'flags/default.svg';
+        
         card.innerHTML = `
             <div class="lm-header">
                 <div class="lm-title">Copa do Mundo da FIFA 2026™</div>
-                <div class="lm-time">${m.minute ? m.minute : ''}</div>
+                <div class="lm-time">${displayTime}</div>
             </div>
             <div class="lm-content">
                 <div class="lm-team lm-home">
-                    <img src="flags/${tTeam(homeName).toLowerCase().replace(/ /g, '-')}.svg" onerror="this.src='flags/default.svg'" class="lm-flag">
+                    <img src="${homeFlag}" class="lm-flag" alt="${tTeam(homeName)}">
                     <div class="lm-name">${tTeam(homeName)}</div>
                     <div class="lm-pos">${homeRankPos}</div>
                 </div>
@@ -696,7 +715,7 @@ function renderLiveMatches(liveScores, groups) {
                     <span class="lm-score">${m.awayScore}</span>
                 </div>
                 <div class="lm-team lm-away">
-                    <img src="flags/${tTeam(awayName).toLowerCase().replace(/ /g, '-')}.svg" onerror="this.src='flags/default.svg'" class="lm-flag">
+                    <img src="${awayFlag}" class="lm-flag" alt="${tTeam(awayName)}">
                     <div class="lm-name">${tTeam(awayName)}</div>
                     <div class="lm-pos">${awayRankPos}</div>
                 </div>
