@@ -42,6 +42,17 @@ const TEAM_NAME_MAP = {
     'Curacao':                    'Curaçao',
     'Cape Verde':                 'Cape Verde',
     'Cabo Verde':                 'Cape Verde',
+    // Novos times Copa 2026
+    'Turkey':                     'Turkey',
+    'Türkiye':                     'Turkey',
+    'Turkiye':                     'Turkey',
+    'Czech Republic':             'Czech Republic',
+    'Czechia':                    'Czech Republic',
+    'Bosnia and Herzegovina':     'Bosnia and Herzegovina',
+    'Bosnia & Herzegovina':       'Bosnia and Herzegovina',
+    'Bosnia-Herzegovina':         'Bosnia and Herzegovina',
+    'Iraq':                       'Iraq',
+    'Sweden':                     'Sweden',
 };
 
 function normalizeName(name) {

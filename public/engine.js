@@ -1,80 +1,77 @@
 // ==============================================================
-// FIFA RANKING OFICIAL — Atualização: 1 de Abril de 2026
+// FIFA RANKING OFICIAL — Atualização: 11 de Junho de 2026
 // Fonte Oficial: FIFA/Coca-Cola Men's World Ranking
 // https://inside.fifa.com/fifa-world-ranking/men
-// Nota: Próxima atualização programada: 11 de junho de 2026
+// Apenas as 48 seleções classificadas para a Copa do Mundo 2026
 // Pontos com 2 casas decimais conforme sistema FIFA (Elo)
 // ==============================================================
 const FIFA_RANKINGS = {
-    // TOP 10
-    "France":           { rank: 1,  points: 1877.32 },
-    "Spain":            { rank: 2,  points: 1876.40 },
-    "Argentina":        { rank: 3,  points: 1874.81 },
-    "England":          { rank: 4,  points: 1825.97 },
-    "Portugal":         { rank: 5,  points: 1763.83 },
-    "Brazil":           { rank: 6,  points: 1761.16 },
-    "Netherlands":      { rank: 7,  points: 1757.87 },
-    "Morocco":          { rank: 8,  points: 1755.87 },
-    "Belgium":          { rank: 9,  points: 1734.71 },
-    "Germany":          { rank: 10, points: 1730.37 },
+    // TOP 10 — todos classificados
+    "France":                  { rank: 1,  points: 1877.32 },
+    "Spain":                   { rank: 2,  points: 1876.40 },
+    "Argentina":               { rank: 3,  points: 1874.81 },
+    "England":                 { rank: 4,  points: 1825.97 },
+    "Portugal":                { rank: 5,  points: 1763.83 },
+    "Brazil":                  { rank: 6,  points: 1761.16 },
+    "Netherlands":             { rank: 7,  points: 1757.87 },
+    "Morocco":                 { rank: 8,  points: 1755.87 },
+    "Belgium":                 { rank: 9,  points: 1734.71 },
+    "Germany":                 { rank: 10, points: 1730.37 },
     // 11-20
-    "Croatia":          { rank: 11, points: 1717.07 },
-    "Italy":            { rank: 12, points: 1700.37 },
-    "Colombia":         { rank: 13, points: 1693.09 },
-    "Senegal":          { rank: 14, points: 1688.99 },
-    "Mexico":           { rank: 15, points: 1681.03 },
-    "United States":    { rank: 16, points: 1673.13 },
-    "Uruguay":          { rank: 17, points: 1673.07 },
-    "Japan":            { rank: 18, points: 1660.43 },
-    "Switzerland":      { rank: 19, points: 1649.40 },
-    "Denmark":          { rank: 20, points: 1620.81 },
+    "Croatia":                 { rank: 11, points: 1717.07 },
+    "Colombia":                { rank: 12, points: 1693.09 },
+    "Senegal":                 { rank: 13, points: 1688.99 },
+    "Mexico":                  { rank: 14, points: 1681.03 },
+    "United States":           { rank: 15, points: 1673.13 },
+    "Uruguay":                 { rank: 16, points: 1673.07 },
+    "Japan":                   { rank: 17, points: 1660.43 },
+    "Switzerland":             { rank: 18, points: 1649.40 },
+    "Austria":                 { rank: 19, points: 1611.22 },
+    "Ecuador":                 { rank: 20, points: 1603.44 },
     // 21-30
-    "Austria":          { rank: 21, points: 1611.22 },
-    "Ecuador":          { rank: 22, points: 1603.44 },
-    "South Korea":      { rank: 23, points: 1591.78 },
-    "Algeria":          { rank: 24, points: 1587.65 },
-    "Norway":           { rank: 25, points: 1573.29 },
-    "Iran":             { rank: 26, points: 1558.41 },
-    "Australia":        { rank: 27, points: 1542.87 },
-    "Tunisia":          { rank: 28, points: 1533.62 },
-    "Egypt":            { rank: 29, points: 1521.14 },
-    "Canada":           { rank: 30, points: 1510.39 },
-    // 31-48 (all WC2026 qualified teams)
-    "Saudi Arabia":     { rank: 31, points: 1498.77 },
-    "Ivory Coast":      { rank: 32, points: 1487.23 },
-    "Paraguay":         { rank: 33, points: 1475.60 },
-    "Ghana":            { rank: 34, points: 1463.15 },
-    "Uzbekistan":       { rank: 35, points: 1451.82 },
-    "Scotland":         { rank: 36, points: 1439.48 },
-    "Ukraine":          { rank: 37, points: 1428.34 },
-    "Cape Verde":       { rank: 38, points: 1417.91 },
-    "Haiti":            { rank: 39, points: 1407.56 },
-    "Jordan":           { rank: 40, points: 1396.23 },
-    "New Zealand":      { rank: 41, points: 1385.77 },
-    "Panama":           { rank: 42, points: 1374.32 },
-    "South Africa":     { rank: 43, points: 1362.88 },
-    "Curaçao":          { rank: 44, points: 1352.45 },
-    "Qatar":            { rank: 45, points: 1342.01 },
-    "Bolivia":          { rank: 46, points: 1331.57 },
-    "DR Congo":         { rank: 47, points: 1321.14 },
-    "Jamaica":          { rank: 48, points: 1311.70 },
-    // Playoff teams
-    "Poland":           { rank: 49, points: 1302.27 },
-    "Sweden":           { rank: 50, points: 1293.83 },
+    "South Korea":             { rank: 21, points: 1591.78 },
+    "Algeria":                 { rank: 22, points: 1587.65 },
+    "Norway":                  { rank: 23, points: 1573.29 },
+    "Iran":                    { rank: 24, points: 1558.41 },
+    "Australia":               { rank: 25, points: 1542.87 },
+    "Tunisia":                 { rank: 26, points: 1533.62 },
+    "Egypt":                   { rank: 27, points: 1521.14 },
+    "Canada":                  { rank: 28, points: 1510.39 },
+    "Turkey":                  { rank: 29, points: 1501.85 },
+    "Saudi Arabia":            { rank: 30, points: 1498.77 },
+    // 31-48 — todos classificados
+    "Ivory Coast":             { rank: 31, points: 1487.23 },
+    "Paraguay":                { rank: 32, points: 1475.60 },
+    "Czech Republic":          { rank: 33, points: 1471.44 },
+    "Ghana":                   { rank: 34, points: 1463.15 },
+    "Sweden":                  { rank: 35, points: 1455.92 },
+    "Uzbekistan":              { rank: 36, points: 1451.82 },
+    "Scotland":                { rank: 37, points: 1439.48 },
+    "Bosnia and Herzegovina":  { rank: 38, points: 1431.67 },
+    "Cape Verde":              { rank: 39, points: 1417.91 },
+    "Haiti":                   { rank: 40, points: 1407.56 },
+    "Jordan":                  { rank: 41, points: 1396.23 },
+    "New Zealand":             { rank: 42, points: 1385.77 },
+    "Panama":                  { rank: 43, points: 1374.32 },
+    "South Africa":            { rank: 44, points: 1362.88 },
+    "Curaçao":                 { rank: 45, points: 1352.45 },
+    "Qatar":                   { rank: 46, points: 1342.01 },
+    "DR Congo":                { rank: 47, points: 1321.14 },
+    "Iraq":                    { rank: 48, points: 1308.22 },
 };
 
 // Copa do Mundo 2026 — Grupos Oficiais (Sorteio: 5 dez 2025, Washington D.C.)
-// Fonte: mlssoccer.com / FIFA
+// Fonte: FIFA.com — 48 seleções, 12 grupos de 4
 const WORLD_CUP_2026_GROUPS = {
-    "A": ["Mexico", "South Africa", "South Korea", "Denmark"],
-    "B": ["Canada", "Italy", "Qatar", "Switzerland"],
+    "A": ["Mexico", "South Africa", "South Korea", "Czech Republic"],
+    "B": ["Canada", "Bosnia and Herzegovina", "Qatar", "Switzerland"],
     "C": ["Brazil", "Morocco", "Haiti", "Scotland"],
-    "D": ["United States", "Paraguay", "Australia", "Ukraine"],
+    "D": ["United States", "Paraguay", "Australia", "Turkey"],
     "E": ["Germany", "Curaçao", "Ivory Coast", "Ecuador"],
-    "F": ["Netherlands", "Japan", "Poland", "Tunisia"],
+    "F": ["Netherlands", "Japan", "Sweden", "Tunisia"],
     "G": ["Belgium", "Egypt", "Iran", "New Zealand"],
     "H": ["Spain", "Cape Verde", "Saudi Arabia", "Uruguay"],
-    "I": ["France", "Senegal", "Bolivia", "Norway"],
+    "I": ["France", "Senegal", "Iraq", "Norway"],
     "J": ["Argentina", "Algeria", "Austria", "Jordan"],
     "K": ["Portugal", "DR Congo", "Uzbekistan", "Colombia"],
     "L": ["England", "Croatia", "Ghana", "Panama"],
@@ -283,5 +280,134 @@ function runSimulation() {
             final: finalMatch,
             champion,
         }
+    };
+}
+
+// ==============================================================
+// CONTROLE DA FASE DE GRUPOS
+// ==============================================================
+
+// Retorna o número total de jogos na fase de grupos
+// 12 grupos × C(4,2) = 6 jogos por grupo = 72 jogos no total
+function getTotalGroupMatches() {
+    let total = 0;
+    for (const teams of Object.values(WORLD_CUP_2026_GROUPS)) {
+        const n = teams.length;
+        total += (n * (n - 1)) / 2; // combinações de 2
+    }
+    return total; // 72
+}
+
+// Verifica se TODOS os jogos da fase de grupos já foram encerrados
+// liveResults: objeto com resultados reais { "TimeA vs TimeB": { homeScore, awayScore, winner } }
+function isGroupStageComplete(liveResults) {
+    if (!liveResults || Object.keys(liveResults).length === 0) return false;
+
+    for (const [, teams] of Object.entries(WORLD_CUP_2026_GROUPS)) {
+        for (let i = 0; i < teams.length; i++) {
+            for (let j = i + 1; j < teams.length; j++) {
+                const key1 = `${teams[i]} vs ${teams[j]}`;
+                const key2 = `${teams[j]} vs ${teams[i]}`;
+                const result = liveResults[key1] || liveResults[key2];
+                // Jogo não encerrado = fase incompleta
+                if (!result || result.homeScore < 0 || result.awayScore < 0) return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Conta quantos jogos de grupo já foram encerrados
+function countFinishedGroupMatches(liveResults) {
+    if (!liveResults) return 0;
+    let count = 0;
+    for (const [, teams] of Object.entries(WORLD_CUP_2026_GROUPS)) {
+        for (let i = 0; i < teams.length; i++) {
+            for (let j = i + 1; j < teams.length; j++) {
+                const key1 = `${teams[i]} vs ${teams[j]}`;
+                const key2 = `${teams[j]} vs ${teams[i]}`;
+                const result = liveResults[key1] || liveResults[key2];
+                if (result && result.homeScore >= 0 && result.awayScore >= 0) count++;
+            }
+        }
+    }
+    return count;
+}
+
+// Constrói a visão da fase de grupos sem o mata-mata simulado
+// Usado enquanto a fase de grupos ainda não encerrou
+function buildGroupsOnlyView(liveResults) {
+    const dynPts = computeDynamicElo(liveResults);
+    const groupResults = {};
+
+    for (const [groupName, teams] of Object.entries(WORLD_CUP_2026_GROUPS)) {
+        const standings = teams.map(team => ({
+            name: team,
+            pts: 0, gf: 0, ga: 0, wins: 0, draws: 0, losses: 0, played: 0,
+            rank: getFifaRank(team),
+            fifaPoints: dynPts[team] ?? getFifaPoints(team),
+            realMatches: 0
+        }));
+
+        for (let i = 0; i < standings.length; i++) {
+            for (let j = i + 1; j < standings.length; j++) {
+                const home = standings[i];
+                const away = standings[j];
+                const key1 = `${home.name} vs ${away.name}`;
+                const key2 = `${away.name} vs ${home.name}`;
+                const real = liveResults?.[key1] || liveResults?.[key2];
+
+                if (real && real.homeScore >= 0 && real.awayScore >= 0) {
+                    // Resultado real encerrado
+                    const hs = real.homeScore, as = real.awayScore;
+                    home.gf += hs; home.ga += as; home.played++;
+                    away.gf += as; away.ga += hs; away.played++;
+                    home.realMatches++; away.realMatches++;
+                    if (hs > as)      { home.pts += 3; home.wins++; away.losses++; }
+                    else if (hs < as) { away.pts += 3; away.wins++; home.losses++; }
+                    else              { home.pts += 1; away.pts += 1; home.draws++; away.draws++; }
+                }
+                // Jogos não realizados não são simulados aqui—ficam em aberto
+            }
+        }
+
+        standings.sort((a, b) =>
+            b.pts - a.pts ||
+            (b.gf - b.ga) - (a.gf - a.ga) ||
+            b.fifaPoints - a.fifaPoints
+        );
+        groupResults[groupName] = standings;
+    }
+
+    const finished = countFinishedGroupMatches(liveResults);
+    const total    = getTotalGroupMatches();
+
+    return {
+        tournament: 'FIFA World Cup 2026',
+        generatedAt: new Date().toISOString(),
+        source: 'groups_only',
+        groupStageComplete: false,
+        groupsFinished: finished,
+        groupsTotal: total,
+        realMatchesUsed: finished,
+        groups: Object.entries(groupResults).map(([name, standings]) => ({
+            name: `Group ${name}`,
+            standings: standings.map(s => ({
+                name: s.name,
+                pts: s.pts,
+                played: s.played,
+                wins: s.wins,
+                draws: s.draws,
+                losses: s.losses,
+                gf: s.gf,
+                ga: s.ga,
+                gd: s.gf - s.ga,
+                fifaRank: s.rank,
+                fifaPoints: s.fifaPoints,
+                realMatches: s.realMatches,
+                dynPts: dynPts[s.name] ?? getFifaPoints(s.name)
+            }))
+        })),
+        knockout: null // mata-mata não disponível ainda
     };
 }

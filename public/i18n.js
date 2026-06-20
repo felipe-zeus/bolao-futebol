@@ -57,6 +57,12 @@ const translations = {
         next_update: "Próxima atualização em",
         seconds: "seg",
         refreshing: "Atualizando...",
+
+        // Fase de grupos
+        groups_in_progress: "⏳ Fase de Grupos em Andamento",
+        simulation_pending: "Simulação do Mata-mata disponível após o encerramento da Fase de Grupos",
+        groups_complete: "✅ Fase de Grupos Encerrada",
+        matches_of: "jogos de",
     },
     en: {
         title: "🏆 World Cup 2026 Predictor",
@@ -108,6 +114,12 @@ const translations = {
         next_update: "Next update in",
         seconds: "sec",
         refreshing: "Refreshing...",
+
+        // Group stage
+        groups_in_progress: "⏳ Group Stage in Progress",
+        simulation_pending: "Knockout simulation available after the Group Stage ends",
+        groups_complete: "✅ Group Stage Complete",
+        matches_of: "matches of",
     },
     es: {
         title: "🏆 Predictor Copa del Mundo 2026",
@@ -159,6 +171,12 @@ const translations = {
         next_update: "Próxima actualización en",
         seconds: "seg",
         refreshing: "Actualizando...",
+
+        // Fase de grupos
+        groups_in_progress: "⏳ Fase de Grupos en Curso",
+        simulation_pending: "Simulación del Cuadro disponible al finalizar la Fase de Grupos",
+        groups_complete: "✅ Fase de Grupos Completada",
+        matches_of: "partidos de",
     }
 };
 
@@ -166,42 +184,45 @@ const translations = {
 // Chave: nome interno em inglês (chave em engine.js / FIFA_RANKINGS)
 const teamNames = {
     pt: {
+        // 48 seleções classificadas para a Copa do Mundo 2026
         "France":"França","Spain":"Espanha","Argentina":"Argentina",
         "England":"Inglaterra","Portugal":"Portugal","Brazil":"Brasil",
         "Netherlands":"Países Baixos","Morocco":"Marrocos","Belgium":"Bélgica",
-        "Germany":"Alemanha","Croatia":"Croácia","Italy":"Itália",
+        "Germany":"Alemanha","Croatia":"Croácia",
         "Colombia":"Colômbia","Senegal":"Senegal","Mexico":"México",
         "United States":"Estados Unidos","Uruguay":"Uruguai","Japan":"Japão",
-        "Switzerland":"Suíça","Denmark":"Dinamarca","Austria":"Áustria",
+        "Switzerland":"Suíça","Austria":"Áustria",
         "Ecuador":"Equador","South Korea":"Coreia do Sul","Algeria":"Argélia",
         "Norway":"Noruega","Iran":"Irã","Australia":"Austrália",
         "Tunisia":"Tunísia","Egypt":"Egito","Canada":"Canadá",
         "Saudi Arabia":"Arábia Saudita","Ivory Coast":"Costa do Marfim",
         "Paraguay":"Paraguai","Ghana":"Gana","Uzbekistan":"Uzbequistão",
-        "Scotland":"Escócia","Ukraine":"Ucrânia","Cape Verde":"Cabo Verde",
+        "Scotland":"Escócia","Czech Republic":"República Tcheca","Cape Verde":"Cabo Verde",
         "Haiti":"Haiti","Jordan":"Jordânia","New Zealand":"Nova Zelândia",
         "Panama":"Panamá","South Africa":"África do Sul","Curaçao":"Curaçao",
-        "Qatar":"Catar","Bolivia":"Bolívia","DR Congo":"RD do Congo",
-        "Jamaica":"Jamaica","Poland":"Polônia","Sweden":"Suécia",
+        "Qatar":"Catar","DR Congo":"RD do Congo","Iraq":"Iraque",
+        "Bosnia and Herzegovina":"Bósnia e Herzegovina","Turkey":"Turquia",
+        "Sweden":"Suécia",
     },
     es: {
         "France":"Francia","Spain":"España","Argentina":"Argentina",
         "England":"Inglaterra","Portugal":"Portugal","Brazil":"Brasil",
         "Netherlands":"Países Bajos","Morocco":"Marruecos","Belgium":"Bélgica",
-        "Germany":"Alemania","Croatia":"Croacia","Italy":"Italia",
+        "Germany":"Alemania","Croatia":"Croacia",
         "Colombia":"Colombia","Senegal":"Senegal","Mexico":"México",
         "United States":"Estados Unidos","Uruguay":"Uruguay","Japan":"Japón",
-        "Switzerland":"Suiza","Denmark":"Dinamarca","Austria":"Austria",
+        "Switzerland":"Suiza","Austria":"Austria",
         "Ecuador":"Ecuador","South Korea":"Corea del Sur","Algeria":"Argelia",
         "Norway":"Noruega","Iran":"Irán","Australia":"Australia",
         "Tunisia":"Túnez","Egypt":"Egipto","Canada":"Canadá",
         "Saudi Arabia":"Arabia Saudita","Ivory Coast":"Costa de Marfil",
         "Paraguay":"Paraguay","Ghana":"Ghana","Uzbekistan":"Uzbekistán",
-        "Scotland":"Escocia","Ukraine":"Ucrania","Cape Verde":"Cabo Verde",
+        "Scotland":"Escocia","Czech Republic":"República Checa","Cape Verde":"Cabo Verde",
         "Haiti":"Haití","Jordan":"Jordania","New Zealand":"Nueva Zelanda",
         "Panama":"Panamá","South Africa":"Sudáfrica","Curaçao":"Curaçao",
-        "Qatar":"Catar","Bolivia":"Bolivia","DR Congo":"RD del Congo",
-        "Jamaica":"Jamaica","Poland":"Polonia","Sweden":"Suecia",
+        "Qatar":"Catar","DR Congo":"RD del Congo","Iraq":"Irak",
+        "Bosnia and Herzegovina":"Bosnia y Herzegovina","Turkey":"Turquía",
+        "Sweden":"Suecia",
     }
 };
 

@@ -4,12 +4,12 @@
 // LÓGICA CENTRAL:
 //   1. Busca resultados reais já encerrados (live.js)
 //   2. Aplica os resultados reais na tabela de grupos
-//   3. Projeta os jogos ainda não realizados via Ranking FIFA
-//   4. Refaz o chaveamento do mata-mata com base no que há de real
-//   5. Simula as fases futuras APENAS UMA VEZ por conjunto de resultados
-//      → Re-simula somente quando novos jogos forem encerrados
-//   6. Polling: 30s com jogo ao vivo, 3min caso contrário
-//   7. Traduções dinâmicas completas via tTeam() + t()
+//   3. DURANTE a Fase de Grupos: exibe apenas pontuação real (sem simulação)
+//      → Tabela detalhada: J V E D GP GC SG Pts + barra de progresso
+//   4. APÓS a Fase de Grupos: simula o mata-mata completo (determinístico)
+//      → Re-simula apenas quando novos jogos forem encerrados
+//   5. Polling: 30s com jogo ao vivo, 3min caso contrário
+//   6. Traduções dinâmicas completas via tTeam() + t()
 // ==============================================================
 
 let cachedData = null;
@@ -19,6 +19,9 @@ let _pollingTimer = null;
 // Só re-simula quando o número de jogos encerrados muda
 let _lastFinishedCount = -1;
 let _cachedSimulation  = null;
+
+// Controle de fase: mata-mata só liberado após fase de grupos completa
+let _groupStageWasComplete = false;
 
 // ── UTILITY ───────────────────────────────────────────────────
 
@@ -304,6 +307,109 @@ function renderGroups(groups) {
     });
 }
 
+// ── RENDER: Fase de Grupos em andamento (sem mata-mata) ────
+// Exibe tabela detalhada + barra de progresso + mensagem de espera
+function renderGroupsOnlyView(groups, finished, total) {
+    // Oculta seções do mata-mata e campeão
+    document.getElementById('knockout-section').style.display = 'none';
+    document.getElementById('champion-section').style.display = 'none';
+
+    // Barra de progresso
+    const pct = total > 0 ? Math.round((finished / total) * 100) : 0;
+    let progressBar = document.getElementById('group-progress-bar');
+    if (!progressBar) {
+        progressBar = document.createElement('div');
+        progressBar.id = 'group-progress-bar';
+        progressBar.className = 'group-progress-bar';
+        const groupsSection = document.getElementById('groups-section');
+        groupsSection.parentNode.insertBefore(progressBar, groupsSection);
+    }
+    progressBar.innerHTML = `
+        <div class="progress-header">
+            <span class="progress-icon">⏳</span>
+            <div class="progress-info">
+                <span class="progress-label">${t('groups_in_progress')}</span>
+                <span class="progress-sub">${t('simulation_pending')}</span>
+            </div>
+            <span class="progress-count">${finished}<span class="progress-sep">/</span>${total}</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" style="width: ${pct}%">
+                <span class="progress-pct">${pct}%</span>
+            </div>
+        </div>
+    `;
+
+    // Tabela dos grupos (formato detalhado: J V E D GP GC Pts)
+    const container = document.getElementById('groups');
+    container.innerHTML = '';
+    groups.forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'group-card group-card--detailed';
+
+        const title = document.createElement('h3');
+        title.textContent = group.name.replace(/^Group\s+/, `${t('group')} `);
+        card.appendChild(title);
+
+        // Cabeçalho da tabela
+        const header = document.createElement('div');
+        header.className = 'group-table-header';
+        header.innerHTML = `
+            <span class="col-team">${t('team_col')}</span>
+            <span class="col-stat">J</span>
+            <span class="col-stat">V</span>
+            <span class="col-stat">E</span>
+            <span class="col-stat">D</span>
+            <span class="col-stat">GP</span>
+            <span class="col-stat">GC</span>
+            <span class="col-stat">SG</span>
+            <span class="col-stat col-pts">${t('pts')}</span>
+        `;
+        card.appendChild(header);
+
+        group.standings.forEach((team, idx) => {
+            const row = document.createElement('div');
+            // Top 2 qualificados, 3º pode qualificar (cor amarela)
+            let rowClass = 'group-team group-team--detailed';
+            if (idx < 2) rowClass += ' qualified';
+            else if (idx === 2) rowClass += ' third-place';
+            row.className = rowClass;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'col-team';
+            nameSpan.textContent = tTeam(team.name);
+            if (team.realMatches > 0) {
+                const badge = document.createElement('span');
+                badge.className = 'real-badge';
+                badge.title = `${team.realMatches} ${t('real_match_title')}`;
+                nameSpan.appendChild(badge);
+            }
+
+            const played  = document.createElement('span'); played.className = 'col-stat';  played.textContent = team.played  ?? 0;
+            const wins    = document.createElement('span'); wins.className   = 'col-stat';  wins.textContent   = team.wins    ?? 0;
+            const draws   = document.createElement('span'); draws.className  = 'col-stat';  draws.textContent  = team.draws   ?? 0;
+            const losses  = document.createElement('span'); losses.className = 'col-stat';  losses.textContent = team.losses  ?? 0;
+            const gf      = document.createElement('span'); gf.className     = 'col-stat';  gf.textContent     = team.gf      ?? 0;
+            const ga      = document.createElement('span'); ga.className     = 'col-stat';  ga.textContent     = team.ga      ?? 0;
+            const gd      = document.createElement('span'); gd.className     = 'col-stat';  const gdVal = (team.gd ?? 0); gd.textContent = gdVal > 0 ? `+${gdVal}` : gdVal;
+            const pts     = document.createElement('span'); pts.className    = 'col-stat col-pts'; pts.textContent = team.pts ?? 0;
+
+            row.appendChild(nameSpan);
+            row.appendChild(played);
+            row.appendChild(wins);
+            row.appendChild(draws);
+            row.appendChild(losses);
+            row.appendChild(gf);
+            row.appendChild(ga);
+            row.appendChild(gd);
+            row.appendChild(pts);
+            card.appendChild(row);
+        });
+
+        container.appendChild(card);
+    });
+}
+
 function renderRankingTable() {
     const container = document.getElementById('ranking-table');
     const entries = Object.entries(FIFA_RANKINGS)
@@ -357,13 +463,19 @@ function renderApp() {
     const live      = window._liveResultsCache || null;
     const liveScores = window._liveScoresCache  || null;
 
-    renderChampion(data.knockout.champion, data.source, data.realMatchesUsed);
-    renderMatchList('final-match',    data.knockout.final,          live, liveScores);
-    renderMatchList('semi-finals',    data.knockout.semiFinals,     live, liveScores);
-    renderMatchList('quarter-finals', data.knockout.quarterFinals,  live, liveScores);
-    renderMatchList('round-16',       data.knockout.roundOf16,      live, liveScores);
-    renderMatchList('round-32',       data.knockout.roundOf32,      live, liveScores);
-    renderGroups(data.groups);
+    if (data.groupStageComplete) {
+        document.getElementById('knockout-section').style.display = '';
+        renderChampion(data.knockout.champion, data.source, data.realMatchesUsed);
+        renderMatchList('final-match',    data.knockout.final,          live, liveScores);
+        renderMatchList('semi-finals',    data.knockout.semiFinals,     live, liveScores);
+        renderMatchList('quarter-finals', data.knockout.quarterFinals,  live, liveScores);
+        renderMatchList('round-16',       data.knockout.roundOf16,      live, liveScores);
+        renderMatchList('round-32',       data.knockout.roundOf32,      live, liveScores);
+        renderGroups(data.groups);
+    } else {
+        renderGroupsOnlyView(data.groups, data.realMatchesUsed, getTotalGroupMatches());
+    }
+
     renderRankingTable();
     updateTimestamp(data.source, data.realMatchesUsed, data.hasLive);
 
@@ -377,9 +489,7 @@ function renderApp() {
     document.title = t('title').replace(/^🏆\s*/, '') || 'Bolão Copa do Mundo 2026';
 }
 
-// ── REFRESH COM SIMULAÇÃO ESTÁVEL ────────────────────────────
-// A simulação só é re-executada quando o número de jogos
-// encerrados mudar — evitando que o campeão mude aleatoriamente
+// ── REFRESH COM SIMULAÇÃO CONDICIONAL ──────────────────────────────────
 async function refresh() {
     const liveSource = await getDataSource();
 
@@ -394,13 +504,36 @@ async function refresh() {
         liveSource.source !== 'simulation' ? liveSource.source : '',
         hasLive);
 
-    // ── Só re-simula quando há novos jogos encerrados ──────────
-    if (finishedCount !== _lastFinishedCount || _cachedSimulation === null) {
-        console.info(`[App] 🔄 Nova simulação (${finishedCount} jogos encerrados)`);
-        _lastFinishedCount = finishedCount;
-        _cachedSimulation  = runHybridSimulation(window._liveResultsCache);
+    // ── Verifica se a fase de grupos está completa ─────────────────
+    const groupsDone = isGroupStageComplete(window._liveResultsCache);
+
+    if (groupsDone) {
+        // ✅ Fase de grupos ENCERRADA — simula mata-mata
+        if (finishedCount !== _lastFinishedCount || _cachedSimulation === null
+                || _cachedSimulation.source === 'groups_only') {
+            console.info(`[App] 🔄 Nova simulação completa (${finishedCount} jogos, grupos encerrados)`);
+            _lastFinishedCount = finishedCount;
+            _cachedSimulation  = runHybridSimulation(window._liveResultsCache);
+            _cachedSimulation.groupStageComplete = true;
+        } else {
+            console.info(`[App] ✅ Simulação estável (${finishedCount} jogos, sem novidades)`);
+        }
+        // Marca transição de grupos → mata-mata
+        if (!_groupStageWasComplete) {
+            _groupStageWasComplete = true;
+            console.info('[App] 🎉 Fase de grupos encerrada! Mata-mata desbloqueado.');
+        }
     } else {
-        console.info(`[App] ✅ Simulação estável (${finishedCount} jogos, sem novidades)`);
+        // ⏳ Fase de grupos EM ANDAMENTO — apenas acumula pontuação real
+        if (finishedCount !== _lastFinishedCount || _cachedSimulation === null) {
+            console.info(`[App] 📊 Grupos em andamento (${finishedCount}/${getTotalGroupMatches()} jogos encerrados)`);
+            _lastFinishedCount = finishedCount;
+            _cachedSimulation  = buildGroupsOnlyView(window._liveResultsCache);
+            _cachedSimulation.groupStageComplete = false;
+        } else {
+            console.info(`[App] ⏳ Aguardando mais jogos (${finishedCount}/${getTotalGroupMatches()} encerrados)`);
+        }
+        _groupStageWasComplete = false;
     }
 
     // Atualiza metadados sem re-simular
@@ -419,15 +552,16 @@ function scheduleNextRefresh(seconds) {
     _pollingTimer = setTimeout(refresh, seconds * 1000);
 }
 
-// ── INIT ─────────────────────────────────────────────────────
+// ── INIT ─────────────────────────────────────────────────
 async function init() {
     await refresh();
 
     document.getElementById('loading-state').style.display   = 'none';
-    document.getElementById('champion-section').style.display = '';
-    document.getElementById('knockout-section').style.display = '';
-    document.getElementById('groups-section').style.display   = '';
-    document.getElementById('ranking-section').style.display  = '';
+    // Grupos e ranking sempre visíveis
+    document.getElementById('groups-section').style.display  = '';
+    document.getElementById('ranking-section').style.display = '';
+    // Mata-mata e campeão só visíveis quando fase de grupos encerrar
+    // (controlado por renderApp() → renderGroupsOnlyView ou renderChampion)
 
     renderApp();
 }
