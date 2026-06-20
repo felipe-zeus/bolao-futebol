@@ -118,6 +118,30 @@ async function fetchFromWorldCup26() {
             };
         });
 
+        function parseScorers(str) {
+            if (!str || str === 'null') return [];
+            try {
+                const matches = str.match(/"([^"]+)"/g) || str.match(/“([^”]+)”/g) || [];
+                const raw = matches.map(s => s.replace(/["“”]/g, ''));
+                const map = {};
+                raw.forEach(s => {
+                    const m = s.match(/(.+?)\s*(\d+.*')/);
+                    if (m) {
+                        const name = m[1].trim();
+                        const min = m[2].trim();
+                        if (!map[name]) map[name] = [];
+                        map[name].push(min);
+                    } else {
+                        if (!map[s]) map[s] = [];
+                    }
+                });
+                return Object.entries(map).map(([name, mins]) => {
+                    if (mins.length === 0) return name;
+                    return `${name} ${mins.join(', ')}`;
+                });
+            } catch (e) { return []; }
+        }
+
         // Processa jogos em andamento (placar parcial)
         inPlay.forEach(m => {
             const home      = normalizeName(m.home_team_name_en || m.home_team?.name || m.home?.name || '');
@@ -125,10 +149,12 @@ async function fetchFromWorldCup26() {
             const homeScore = parseInt(m.home_score ?? 0);
             const awayScore = parseInt(m.away_score ?? 0);
             const minute    = m.time_elapsed || m.minute || m.elapsed || null;
+            const homeScorers = parseScorers(m.home_scorers);
+            const awayScorers = parseScorers(m.away_scorers);
 
             if (!home || !away) return;
             liveScores[`${home} vs ${away}`] = {
-                homeScore, awayScore, minute,
+                homeScore, awayScore, minute, homeScorers, awayScorers,
                 status: 'in_play',
                 source: 'worldcup26.ir'
             };

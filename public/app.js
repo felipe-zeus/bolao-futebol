@@ -63,8 +63,7 @@ function setStatus(mode, sourceLabel = '', hasLive = false) {
     const statusText = document.getElementById('status-text');
     if (mode === 'live') {
         dot.classList.add('live');
-        statusText.textContent = (hasLive ? t('status_live_playing') : t('status_live'))
-            + (sourceLabel ? ` (${sourceLabel})` : '');
+        statusText.textContent = hasLive ? t('status_live_playing') : t('status_live');
     } else {
         dot.classList.remove('live');
         statusText.textContent = t('status_simulation');

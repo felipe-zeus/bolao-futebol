@@ -26,7 +26,7 @@
                     <span class="pulse-dot"></span>
                     <span id="status-text">🔵 Simulação</span>
                 </div>
-                <div id="next-update-countdown" class="countdown-badge" onclick="refresh()" style="cursor: pointer;" title="Clique para forçar atualização"></div>
+                <div id="next-update-countdown" class="countdown-badge" onclick="refresh()" style="display: none !important; cursor: pointer;" title="Clique para forçar atualização"></div>
                 <div class="lang-switcher">
                     <button class="lang-btn" data-lang="pt" onclick="setLang('pt')">🇧🇷 PT</button>
                     <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
@@ -83,6 +83,9 @@
                 <ul id="round-32" class="match-list grid-list"></ul>
             </section>
         </div>
+
+        <!-- Live Matches -->
+        <section id="live-matches-section" style="display:none"></section>
 
         <!-- Group Stage -->
         <section class="glass-card" id="groups-section" style="display:none">
