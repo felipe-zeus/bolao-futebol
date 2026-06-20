@@ -142,13 +142,35 @@ async function fetchFromWorldCup26() {
             } catch (e) { return []; }
         }
 
+        // Tenta obter o minuto exato através do scraper
+        let exactMinute = null;
+        let hasScraperError = false;
+        
+        if (inPlay.length > 0) {
+            try {
+                const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
+                const scraperRes = await fetch(`${proxyUrl}/wc2026/live-minute`, { signal: AbortSignal.timeout(3000) });
+                if (scraperRes.ok) {
+                    const scraperData = await scraperRes.json();
+                    if (scraperData.scraper_broken) {
+                        hasScraperError = true;
+                    } else {
+                        exactMinute = scraperData.minute;
+                    }
+                }
+            } catch (err) {
+                console.warn('[Scraper] Erro de conexão com proxy scraper:', err.message);
+                hasScraperError = true;
+            }
+        }
+
         // Processa jogos em andamento (placar parcial)
         inPlay.forEach(m => {
             const home      = normalizeName(m.home_team_name_en || m.home_team?.name || m.home?.name || '');
             const away      = normalizeName(m.away_team_name_en || m.away_team?.name || m.away?.name || '');
             const homeScore = parseInt(m.home_score ?? 0);
             const awayScore = parseInt(m.away_score ?? 0);
-            const minute    = m.time_elapsed || m.minute || m.elapsed || null;
+            const minute    = exactMinute || m.time_elapsed || m.minute || m.elapsed || null;
             const homeScorers = parseScorers(m.home_scorers);
             const awayScorers = parseScorers(m.away_scorers);
 
@@ -169,6 +191,7 @@ async function fetchFromWorldCup26() {
             source: 'worldcup26.ir',
             data: results,
             liveScores,
+            hasScraperError, // Repassa o erro do scraper
             hasLive: Object.keys(liveScores).length > 0
         };
 

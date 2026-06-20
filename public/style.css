@@ -784,6 +784,19 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 }
 
 /* ── LIVE MATCH WIDGET ────────────────────────────────────────── */
+.scraper-warning-badge {
+    background: rgba(255, 165, 0, 0.1);
+    border: 1px solid rgba(255, 165, 0, 0.3);
+    color: #ffb74d;
+    padding: 0.8rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    backdrop-filter: blur(5px);
+    width: 100%;
+}
+
 #live-matches-section {
     display: flex;
     flex-direction: column;

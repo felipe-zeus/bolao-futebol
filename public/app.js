@@ -505,6 +505,7 @@ async function refresh() {
 
         window._liveResultsCache = liveSource.data       || null;
         window._liveScoresCache  = liveSource.liveScores || null;
+        window._hasScraperError  = liveSource.hasScraperError || false;
 
         const finishedCount = window._liveResultsCache
             ? Object.keys(window._liveResultsCache).length : 0;
@@ -654,6 +655,13 @@ function renderLiveMatches(liveScores, groups) {
     
     sec.style.display = '';
     sec.innerHTML = '';
+    
+    if (window._hasScraperError) {
+        const warning = document.createElement('div');
+        warning.className = 'scraper-warning-badge';
+        warning.innerHTML = '⚠️ O serviço de cronômetro exato está em manutenção devido a mudanças na fonte de dados. Exibindo tempo genérico.';
+        sec.appendChild(warning);
+    }
     
     const ISO_MAP = {
         "France":"fr","Spain":"es","Argentina":"ar","England":"gb-eng","Portugal":"pt",
