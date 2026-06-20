@@ -532,10 +532,21 @@ function renderNextMatchPreview() {
         return;
     }
 
+    // Se o próximo jogo já está acontecendo AGORA (nos liveScoresCache), tenta pegar o FALLBACK se existir
+    // Mas na verdade, se já está ao vivo, o ideal é não mostrar duplicado.
+    if (window._liveScoresCache) {
+        const key1 = `${matchData.home} vs ${matchData.away}`;
+        const key2 = `${matchData.away} vs ${matchData.home}`;
+        if (window._liveScoresCache[key1] || window._liveScoresCache[key2]) {
+            sec.style.display = 'none';
+            return;
+        }
+    }
+
     sec.style.display = '';
     sec.innerHTML = '';
 
-    let displayTime = matchData.time;
+    let displayTime = matchData.time || 'A definir';
     if (matchData.utcDate) {
         const d = new Date(matchData.utcDate);
         displayTime = d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ' às');
