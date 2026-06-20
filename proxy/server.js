@@ -86,13 +86,15 @@ app.get('/wc2026/live', async (req, res) => {
         const inPlay   = matches.filter(m => ['IN_PLAY', 'PAUSED', 'HALF_TIME'].includes(m.status));
         const upcoming = matches.filter(m => ['TIMED', 'SCHEDULED'].includes(m.status));
 
-        // Próxima partida agendada
-        const nextMatch = upcoming.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))[0] || null;
+        // Próxima partida agendada (manter para comp. com versões anteriores)
+        const upcomingSorted = upcoming.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+        const nextMatch = upcomingSorted[0] || null;
 
         return res.json({
             finished,
             inPlay,
             nextMatch,
+            upcomingMatches: upcomingSorted, // Array completo para o frontend pular os que já começaram
             totalFinished: finished.length,
             hasLive: inPlay.length > 0,
             fetchedAt: new Date().toISOString()

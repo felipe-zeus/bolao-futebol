@@ -272,22 +272,31 @@ async function getDataSource() {
     // Busca a próxima partida silenciosamente do proxy (Layer 2)
     // independentemente de qual camada fornecer os resultados das partidas
     let nextMatch = null;
+    let upcomingMatches = [];
     try {
         const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
         const proxyRes = await fetch(`${proxyUrl}/wc2026/live`, { signal: AbortSignal.timeout(3000) });
         if (proxyRes.ok) {
             const proxyData = await proxyRes.json();
-            if (proxyData && proxyData.nextMatch) {
+            if (proxyData && proxyData.upcomingMatches) {
+                upcomingMatches = proxyData.upcomingMatches.map(m => ({
+                    home: normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || ''),
+                    away: normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || ''),
+                    utcDate: m.utcDate
+                }));
+                nextMatch = upcomingMatches[0] || null;
+            } else if (proxyData && proxyData.nextMatch) {
                 const m = proxyData.nextMatch;
                 nextMatch = {
                     home: normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || ''),
                     away: normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || ''),
                     utcDate: m.utcDate
                 };
+                upcomingMatches = [nextMatch];
             }
         }
     } catch (e) {
-        console.warn('[Live] Falha ao obter nextMatch do proxy:', e.message);
+        console.warn('[Live] Falha ao obter upcomingMatches do proxy:', e.message);
     }
 
     // Tenta Camada 1
@@ -296,6 +305,7 @@ async function getDataSource() {
         const total = Object.keys(layer1.data).length + Object.keys(layer1.liveScores).length;
         console.info(`[Live] ✅ ${layer1.source}: ${Object.keys(layer1.data).length} encerradas, ${Object.keys(layer1.liveScores).length} ao vivo`);
         layer1.nextMatch = nextMatch;
+        layer1.upcomingMatches = upcomingMatches;
         return layer1;
     }
 
@@ -305,6 +315,7 @@ async function getDataSource() {
         const total = Object.keys(layer2.data).length + Object.keys(layer2.liveScores).length;
         console.info(`[Live] ⚠️ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
         layer2.nextMatch = nextMatch;
+        layer2.upcomingMatches = upcomingMatches;
         return layer2;
     }
 
@@ -319,7 +330,7 @@ async function getDataSource() {
             source: "offline_cache"
         }
     };
-    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: fallbackLive, hasLive: true, nextMatch };
+    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: fallbackLive, hasLive: true, nextMatch, upcomingMatches };
 }
 
 // ── STATUS PÚBLICO ───────────────────────────────────────────────

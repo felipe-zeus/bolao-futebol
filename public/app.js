@@ -10,12 +10,11 @@
 //      → Re-simula apenas quando novos jogos forem encerrados
 //   5. Polling: 30s com jogo ao vivo, 3min caso contrário
 //   6. Traduções dinâmicas completas via tTeam() + t()
-// ==============================================================
-
+// Configuração manual do Próximo Jogo (fallback se a API não retornar)
 const NEXT_MATCH = {
-    home: 'Turkey',
-    away: 'Paraguay',
-    time: 'Hoje, 21:00'
+    home: 'Netherlands',
+    away: 'Sweden',
+    time: 'Hoje, 14:00'
 };
 
 let cachedData = null;
@@ -525,22 +524,29 @@ function renderApp() {
 
 function renderNextMatchPreview() {
     const sec = document.getElementById('next-match-section');
-    const matchData = window._nextMatchCache || NEXT_MATCH;
+    
+    // Procura o próximo jogo na lista 'upcomingMatches' que NÃO esteja já rolando e nem finalizado
+    let bestMatch = null;
+    if (window._upcomingMatchesCache && window._upcomingMatchesCache.length > 0) {
+        for (const match of window._upcomingMatchesCache) {
+            const key1 = `${match.home} vs ${match.away}`;
+            const key2 = `${match.away} vs ${match.home}`;
+            
+            const isLive = window._liveScoresCache && (window._liveScoresCache[key1] || window._liveScoresCache[key2]);
+            const isFinished = window._liveResultsCache && (window._liveResultsCache[key1] || window._liveResultsCache[key2]);
+            
+            if (!isLive && !isFinished) {
+                bestMatch = match;
+                break; // Achou o mais próximo no futuro verdadeiro!
+            }
+        }
+    }
+
+    const matchData = bestMatch || window._nextMatchCache || NEXT_MATCH;
 
     if (!sec || !matchData) {
         if (sec) sec.style.display = 'none';
         return;
-    }
-
-    // Se o próximo jogo já está acontecendo AGORA (nos liveScoresCache), tenta pegar o FALLBACK se existir
-    // Mas na verdade, se já está ao vivo, o ideal é não mostrar duplicado.
-    if (window._liveScoresCache) {
-        const key1 = `${matchData.home} vs ${matchData.away}`;
-        const key2 = `${matchData.away} vs ${matchData.home}`;
-        if (window._liveScoresCache[key1] || window._liveScoresCache[key2]) {
-            sec.style.display = 'none';
-            return;
-        }
     }
 
     sec.style.display = '';
@@ -604,6 +610,8 @@ async function refresh() {
 
         window._liveResultsCache = liveSource.data       || null;
         window._liveScoresCache  = liveSource.liveScores || null;
+        window._nextMatchCache   = liveSource.nextMatch  || null;
+        window._upcomingMatchesCache = liveSource.upcomingMatches || [];
         window._hasScraperError  = liveSource.hasScraperError || false;
 
         const finishedCount = window._liveResultsCache
