@@ -14,6 +14,9 @@
 
 let cachedData = null;
 let _pollingTimer = null;
+let _countdownTimer = null;
+let _countdownSeconds = 0;
+let _isRefreshing = false;
 
 // Controle de estabilidade da simulação:
 // Só re-simula quando o número de jogos encerrados muda
@@ -489,68 +492,132 @@ function renderApp() {
     document.title = t('title').replace(/^🏆\s*/, '') || 'Bolão Copa do Mundo 2026';
 }
 
-// ── REFRESH COM SIMULAÇÃO CONDICIONAL ──────────────────────────────────
+// ── REFRESH COM SIMULAÇÃO CONDICIONAL ────────────────────────────────
 async function refresh() {
-    const liveSource = await getDataSource();
+    if (_isRefreshing) return; // evita chamadas concorrentes
+    _isRefreshing = true;
+    _updateCountdownUI();
 
-    window._liveResultsCache = liveSource.data       || null;
-    window._liveScoresCache  = liveSource.liveScores || null;
+    try {
+        const liveSource = await getDataSource();
 
-    const finishedCount = window._liveResultsCache
-        ? Object.keys(window._liveResultsCache).length : 0;
-    const hasLive = liveSource.hasLive || false;
+        window._liveResultsCache = liveSource.data       || null;
+        window._liveScoresCache  = liveSource.liveScores || null;
 
-    setStatus(liveSource.mode,
-        liveSource.source !== 'simulation' ? liveSource.source : '',
-        hasLive);
+        const finishedCount = window._liveResultsCache
+            ? Object.keys(window._liveResultsCache).length : 0;
+        const hasLive = liveSource.hasLive || false;
 
-    // ── Verifica se a fase de grupos está completa ─────────────────
-    const groupsDone = isGroupStageComplete(window._liveResultsCache);
+        setStatus(liveSource.mode,
+            liveSource.source !== 'simulation' ? liveSource.source : '',
+            hasLive);
 
-    if (groupsDone) {
-        // ✅ Fase de grupos ENCERRADA — simula mata-mata
-        if (finishedCount !== _lastFinishedCount || _cachedSimulation === null
-                || _cachedSimulation.source === 'groups_only') {
-            console.info(`[App] 🔄 Nova simulação completa (${finishedCount} jogos, grupos encerrados)`);
-            _lastFinishedCount = finishedCount;
-            _cachedSimulation  = runHybridSimulation(window._liveResultsCache);
-            _cachedSimulation.groupStageComplete = true;
+        // ── Verifica se a fase de grupos está completa ──────────────────────
+        const groupsDone = isGroupStageComplete(window._liveResultsCache);
+
+        if (groupsDone) {
+            // ✅ Fase de grupos ENCERRADA — simula mata-mata
+            if (finishedCount !== _lastFinishedCount || _cachedSimulation === null
+                    || _cachedSimulation.source === 'groups_only') {
+                console.info(`[App] 🔄 Nova simulação completa (${finishedCount} jogos, grupos encerrados)`);
+                _lastFinishedCount = finishedCount;
+                _cachedSimulation  = runHybridSimulation(window._liveResultsCache);
+                _cachedSimulation.groupStageComplete = true;
+            } else {
+                console.info(`[App] ✅ Simulação estável (${finishedCount} jogos, sem novidades)`);
+            }
+            if (!_groupStageWasComplete) {
+                _groupStageWasComplete = true;
+                console.info('[App] 🎉 Fase de grupos encerrada! Mata-mata desbloqueado.');
+            }
         } else {
-            console.info(`[App] ✅ Simulação estável (${finishedCount} jogos, sem novidades)`);
+            // ⏳ Fase de grupos EM ANDAMENTO — apenas acumula pontuação real
+            if (finishedCount !== _lastFinishedCount || _cachedSimulation === null) {
+                console.info(`[App] 📊 Grupos em andamento (${finishedCount}/${getTotalGroupMatches()} jogos encerrados)`);
+                _lastFinishedCount = finishedCount;
+                _cachedSimulation  = buildGroupsOnlyView(window._liveResultsCache);
+                _cachedSimulation.groupStageComplete = false;
+            } else {
+                console.info(`[App] ⏳ Aguardando mais jogos (${finishedCount}/${getTotalGroupMatches()} encerrados)`);
+            }
+            _groupStageWasComplete = false;
         }
-        // Marca transição de grupos → mata-mata
-        if (!_groupStageWasComplete) {
-            _groupStageWasComplete = true;
-            console.info('[App] 🎉 Fase de grupos encerrada! Mata-mata desbloqueado.');
-        }
-    } else {
-        // ⏳ Fase de grupos EM ANDAMENTO — apenas acumula pontuação real
-        if (finishedCount !== _lastFinishedCount || _cachedSimulation === null) {
-            console.info(`[App] 📊 Grupos em andamento (${finishedCount}/${getTotalGroupMatches()} jogos encerrados)`);
-            _lastFinishedCount = finishedCount;
-            _cachedSimulation  = buildGroupsOnlyView(window._liveResultsCache);
-            _cachedSimulation.groupStageComplete = false;
-        } else {
-            console.info(`[App] ⏳ Aguardando mais jogos (${finishedCount}/${getTotalGroupMatches()} encerrados)`);
-        }
-        _groupStageWasComplete = false;
+
+        // Atualiza metadados sem re-simular
+        _cachedSimulation.source   = liveSource.mode;
+        _cachedSimulation.hasLive  = hasLive;
+        cachedData = _cachedSimulation;
+
+        renderApp();
+
+        // Polling adaptativo inteligente
+        const interval = getPollingInterval(hasLive);
+        console.info(`[App] ⏱ Próxima atualização em ${interval}s`);
+        scheduleNextRefresh(interval);
+
+    } finally {
+        _isRefreshing = false;
+        _updateCountdownUI();
     }
+}
 
-    // Atualiza metadados sem re-simular
-    _cachedSimulation.source   = liveSource.mode;
-    _cachedSimulation.hasLive  = hasLive;
-    cachedData = _cachedSimulation;
+// ── POLLING INTELIGENTE ──────────────────────────────────────────
+// Intervalo adaptativo baseado em estado:
+//   20s → jogo ao vivo
+//   45s → horário de jogo (12h–23h hora local)
+//   90s → fora do horário
+function getPollingInterval(hasLive) {
+    if (hasLive) return 20;
+    const hour = new Date().getHours();
+    // Copa do Mundo 2026: jogos entre 12h e 23h (BRT)
+    const isGameHour = hour >= 12 && hour <= 23;
+    return isGameHour ? 45 : 90;
+}
 
-    renderApp();
+// ── COUNTDOWN REGRESSIVO ─────────────────────────────────────────
+function startCountdown(seconds) {
+    if (_countdownTimer) clearInterval(_countdownTimer);
+    _countdownSeconds = seconds;
+    _updateCountdownUI();
+    _countdownTimer = setInterval(() => {
+        _countdownSeconds = Math.max(0, _countdownSeconds - 1);
+        _updateCountdownUI();
+    }, 1000);
+}
 
-    // Polling adaptativo: 30s ao vivo | 3min sem jogo
-    scheduleNextRefresh(hasLive ? 30 : 180);
+function _updateCountdownUI() {
+    const el = document.getElementById('next-update-countdown');
+    if (!el) return;
+    if (_isRefreshing) {
+        el.textContent = t('refreshing');
+        el.classList.add('refreshing');
+        return;
+    }
+    el.classList.remove('refreshing');
+    el.textContent = `${t('next_update')} ${_countdownSeconds}${t('seconds')}`;
 }
 
 function scheduleNextRefresh(seconds) {
     if (_pollingTimer) clearTimeout(_pollingTimer);
     _pollingTimer = setTimeout(refresh, seconds * 1000);
+    startCountdown(seconds);
 }
+
+// ── PAGE VISIBILITY: pausa quando aba oculta, atualiza ao retornar ──
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        // Suspende polling e countdown
+        if (_pollingTimer)   clearTimeout(_pollingTimer);
+        if (_countdownTimer) clearInterval(_countdownTimer);
+        console.info('[App] 👁 Aba oculta — polling suspenso');
+    } else {
+        // Aba voltou a ser visível → atualiza imediatamente
+        console.info('[App] 👁 Aba visível — refresh imediato');
+        if (_pollingTimer)   clearTimeout(_pollingTimer);
+        if (_countdownTimer) clearInterval(_countdownTimer);
+        refresh();
+    }
+});
 
 // ── INIT ─────────────────────────────────────────────────
 async function init() {
