@@ -129,7 +129,15 @@ function runHybridSimulation(liveResults) {
 
                 if (real && real.winner !== undefined) {
                     // ✅ RESULTADO REAL — aplica diretamente (fixo)
-                    const hs = real.homeScore, as = real.awayScore;
+                    let hs, as;
+                    if (real === liveResults?.[key1]) {
+                        hs = real.homeScore;
+                        as = real.awayScore;
+                    } else {
+                        hs = real.awayScore;
+                        as = real.homeScore;
+                    }
+                    
                     home.gf += hs; home.ga += as;
                     away.gf += as; away.ga += hs;
                     home.realMatches++; away.realMatches++;

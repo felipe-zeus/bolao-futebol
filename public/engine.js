@@ -359,7 +359,15 @@ function buildGroupsOnlyView(liveResults) {
 
                 if (real && real.homeScore >= 0 && real.awayScore >= 0) {
                     // Resultado real encerrado
-                    const hs = real.homeScore, as = real.awayScore;
+                    let hs, as;
+                    if (real === liveResults?.[key1]) {
+                        hs = real.homeScore;
+                        as = real.awayScore;
+                    } else {
+                        hs = real.awayScore;
+                        as = real.homeScore;
+                    }
+                    
                     home.gf += hs; home.ga += as; home.played++;
                     away.gf += as; away.ga += hs; away.played++;
                     home.realMatches++; away.realMatches++;
