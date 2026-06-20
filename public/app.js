@@ -525,10 +525,21 @@ function renderApp() {
 
 function renderNextMatchPreview() {
     const sec = document.getElementById('next-match-section');
-    if (!sec || !NEXT_MATCH) return;
+    const matchData = window._nextMatchCache || NEXT_MATCH;
+
+    if (!sec || !matchData) {
+        if (sec) sec.style.display = 'none';
+        return;
+    }
 
     sec.style.display = '';
     sec.innerHTML = '';
+
+    let displayTime = matchData.time;
+    if (matchData.utcDate) {
+        const d = new Date(matchData.utcDate);
+        displayTime = d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ' às');
+    }
 
     const ISO_MAP = {
         "France":"fr","Spain":"es","Argentina":"ar","England":"gb-eng","Portugal":"pt",
@@ -543,8 +554,8 @@ function renderNextMatchPreview() {
         "Norway":"no","Curaçao":"cw","Uzbekistan":"uz","Haiti":"ht"
     };
 
-    const homeFlag = ISO_MAP[NEXT_MATCH.home] ? `https://flagcdn.com/w80/${ISO_MAP[NEXT_MATCH.home]}.png` : 'flags/default.svg';
-    const awayFlag = ISO_MAP[NEXT_MATCH.away] ? `https://flagcdn.com/w80/${ISO_MAP[NEXT_MATCH.away]}.png` : 'flags/default.svg';
+    const homeFlag = ISO_MAP[matchData.home] ? `https://flagcdn.com/w80/${ISO_MAP[matchData.home]}.png` : 'flags/default.svg';
+    const awayFlag = ISO_MAP[matchData.away] ? `https://flagcdn.com/w80/${ISO_MAP[matchData.away]}.png` : 'flags/default.svg';
 
     const card = document.createElement('div');
     card.className = 'next-match-widget';
@@ -555,16 +566,16 @@ function renderNextMatchPreview() {
         </div>
         <div class="nm-content">
             <div class="nm-team">
-                <img src="${homeFlag}" class="nm-flag" alt="${tTeam(NEXT_MATCH.home)}">
-                <div class="nm-name">${tTeam(NEXT_MATCH.home)}</div>
+                <img src="${homeFlag}" class="nm-flag" alt="${tTeam(matchData.home)}">
+                <div class="nm-name">${tTeam(matchData.home)}</div>
             </div>
             <div class="nm-vs">
                 <div class="nm-vs-text">VS</div>
-                <div class="nm-time">${NEXT_MATCH.time}</div>
+                <div class="nm-time">${displayTime}</div>
             </div>
             <div class="nm-team">
-                <img src="${awayFlag}" class="nm-flag" alt="${tTeam(NEXT_MATCH.away)}">
-                <div class="nm-name">${tTeam(NEXT_MATCH.away)}</div>
+                <img src="${awayFlag}" class="nm-flag" alt="${tTeam(matchData.away)}">
+                <div class="nm-name">${tTeam(matchData.away)}</div>
             </div>
         </div>
     `;

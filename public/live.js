@@ -288,23 +288,45 @@ const FALLBACK_RESULTS = {"Mexico vs South Africa":{"winner":"Mexico","homeScore
 
 // ── ORQUESTRADOR PRINCIPAL ──────────────────────────────────────
 async function getDataSource() {
+    // Busca a próxima partida silenciosamente do proxy (Layer 2)
+    // independentemente de qual camada fornecer os resultados das partidas
+    let nextMatch = null;
+    try {
+        const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
+        const proxyRes = await fetch(`${proxyUrl}/wc2026/live`, { signal: AbortSignal.timeout(3000) });
+        if (proxyRes.ok) {
+            const proxyData = await proxyRes.json();
+            if (proxyData && proxyData.nextMatch) {
+                const m = proxyData.nextMatch;
+                nextMatch = {
+                    home: normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || ''),
+                    away: normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || ''),
+                    utcDate: m.utcDate
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('[Live] Falha ao obter nextMatch do proxy:', e.message);
+    }
+
     // Tenta Camada 1
     const layer1 = await fetchFromWorldCup26();
     if (layer1) {
         const total = Object.keys(layer1.data).length + Object.keys(layer1.liveScores).length;
         console.info(`[Live] ✅ ${layer1.source}: ${Object.keys(layer1.data).length} encerradas, ${Object.keys(layer1.liveScores).length} ao vivo`);
+        layer1.nextMatch = nextMatch;
         return layer1;
     }
 
     // Tenta Camada 2 (proxy local)
     const layer2 = await fetchFromProxy();
     if (layer2) {
-        console.info(`[Live] ✅ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
+        const total = Object.keys(layer2.data).length + Object.keys(layer2.liveScores).length;
+        console.info(`[Live] ⚠️ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
+        layer2.nextMatch = nextMatch;
         return layer2;
     }
 
-    // Fallback: Backup Estático + Simulação
-    console.info('[Live] 🔵 Modo Backup Estático — APIs indisponíveis, usando cache de 30 jogos.');
     const fallbackLive = {
         "Brazil vs Haiti": {
             homeScore: 3,
@@ -316,7 +338,7 @@ async function getDataSource() {
             source: "offline_cache"
         }
     };
-    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: fallbackLive, hasLive: true };
+    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: fallbackLive, hasLive: true, nextMatch };
 }
 
 // ── STATUS PÚBLICO ───────────────────────────────────────────────
