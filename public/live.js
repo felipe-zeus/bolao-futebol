@@ -66,7 +66,7 @@ async function fetchFromWorldCup26() {
     try {
         const res = await fetch(`${WORLDCUP26_URL}/get/games`, {
             headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(30000)
+            signal: AbortSignal.timeout(5000)
         });
 
         if (!res.ok) throw new Error(`worldcup26.ir /get/games status: ${res.status}`);

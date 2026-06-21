@@ -128,9 +128,14 @@ async function fetchFootballData(urlPath) {
     if (!API_KEY) throw new Error('FOOTBALL_DATA_KEY não configurada no proxy.');
 
     const fetcher = typeof fetch !== 'undefined' ? fetch : require('node-fetch');
+    const options = { headers: { 'X-Auth-Token': API_KEY } };
+    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+        options.signal = AbortSignal.timeout(5000);
+    }
+    
     const response = await fetcher(
         `https://api.football-data.org/v4${urlPath}`,
-        { headers: { 'X-Auth-Token': API_KEY } }
+        options
     );
 
     if (!response.ok) {
