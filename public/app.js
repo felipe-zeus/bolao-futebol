@@ -845,6 +845,7 @@ window.renderApp = renderApp;
 document.addEventListener('DOMContentLoaded', () => {
     setLang(currentLang);
     init();
+    setupPushNotifications();
 
     // Easter egg para testar a animacao de gol
     const mainTitle = document.querySelector('h1');
@@ -1020,4 +1021,73 @@ function renderLiveMatches(liveScores, groups) {
         `;
         sec.appendChild(card);
     });
+}
+
+// ── PUSH NOTIFICATIONS (SERVICE WORKER) ──────────────────────────
+async function setupPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    const btn = document.getElementById('btn-subscribe');
+    if (!btn) return;
+
+    try {
+        const registration = await navigator.serviceWorker.register('sw.js');
+        
+        let sub = await registration.pushManager.getSubscription();
+        if (sub) {
+            btn.textContent = '🔔 Alertas Ativos';
+            btn.classList.add('active');
+            btn.disabled = true;
+        }
+
+        btn.addEventListener('click', async () => {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert('Permissão negada. Ative nas configurações do navegador.');
+                return;
+            }
+
+            const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
+            
+            try {
+                const response = await fetch(${proxyUrl}/api/notifications/vapidPublicKey);
+                if (!response.ok) throw new Error('Servidor indisponível para Web Push');
+                
+                const vapidData = await response.json();
+                const convertedVapidKey = urlBase64ToUint8Array(vapidData.publicKey);
+
+                sub = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+
+                await fetch(${proxyUrl}/api/notifications/subscribe, {
+                    method: 'POST',
+                    body: JSON.stringify(sub),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                btn.textContent = '🔔 Alertas Ativos';
+                btn.classList.add('active');
+                btn.disabled = true;
+                alert('Tudo pronto! Você receberá os alertas de Gols.');
+            } catch (e) {
+                console.error(e);
+                alert('Não foi possível conectar ao servidor de alertas agora. Tente mais tarde.');
+            }
+        });
+    } catch (e) {
+        console.error('Erro no Service Worker', e);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
 }

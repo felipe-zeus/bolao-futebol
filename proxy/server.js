@@ -23,6 +23,31 @@ const rateLimit = require('express-rate-limit');
 
 // ── 1. Secure Headers (Helmet) ─────────────────────────────────
 app.use(helmet());
+app.use(express.json()); // Parse JSON body for Push Subscriptions
+
+const webpush = require('web-push');
+
+// Setup VAPID Keys for Push Notifications
+const VAPID_KEYS_FILE = path.join(__dirname, 'vapidKeys.json');
+let vapidKeys = {};
+if (fs.existsSync(VAPID_KEYS_FILE)) {
+    vapidKeys = JSON.parse(fs.readFileSync(VAPID_KEYS_FILE, 'utf8'));
+} else {
+    vapidKeys = webpush.generateVAPIDKeys();
+    fs.writeFileSync(VAPID_KEYS_FILE, JSON.stringify(vapidKeys));
+}
+
+webpush.setVapidDetails(
+    'mailto:contato@bolao26.com',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);
+
+const SUBSCRIPTIONS_FILE = path.join(__dirname, 'subscriptions.json');
+let subscriptions = [];
+if (fs.existsSync(SUBSCRIPTIONS_FILE)) {
+    subscriptions = JSON.parse(fs.readFileSync(SUBSCRIPTIONS_FILE, 'utf8'));
+}
 
 // ── 2. Rate Limiting (Bloqueio de DDoS) ────────────────────────
 const limiter = rateLimit({
@@ -112,6 +137,74 @@ async function fetchFootballData(urlPath) {
     }
     return response.json();
 }
+
+// ── PUSH NOTIFICATIONS ENGINE ────────────────────────────────
+let lastMatchesState = {};
+
+function detectAndSendGoalPush(matches) {
+    matches.forEach(m => {
+        if (!['IN_PLAY', 'PAUSED'].includes(m.status)) return;
+        
+        const key = m.id;
+        const currentHome = m.score?.fullTime?.home || 0;
+        const currentAway = m.score?.fullTime?.away || 0;
+        const homeName = m.homeTeam?.shortName || m.homeTeam?.name;
+        const awayName = m.awayTeam?.shortName || m.awayTeam?.name;
+
+        if (lastMatchesState[key]) {
+            const prevHome = lastMatchesState[key].home;
+            const prevAway = lastMatchesState[key].away;
+
+            if (currentHome > prevHome || currentAway > prevAway) {
+                const scoringTeam = currentHome > prevHome ? homeName : awayName;
+                sendPushToAll(`⚽ GOL DA ${scoringTeam.toUpperCase()}!`, `${homeName} ${currentHome} x ${currentAway} ${awayName}`);
+            }
+        }
+        
+        lastMatchesState[key] = { home: currentHome, away: currentAway };
+    });
+}
+
+function sendPushToAll(title, body) {
+    console.log(`[Push] Disparando: ${title} - ${body}`);
+    const payload = JSON.stringify({ title, body, url: '/' });
+    
+    subscriptions.forEach(sub => {
+        webpush.sendNotification(sub, payload).catch(err => {
+            if (err.statusCode === 410 || err.statusCode === 404) {
+                subscriptions = subscriptions.filter(s => s.endpoint !== sub.endpoint);
+                fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions));
+            }
+        });
+    });
+}
+
+// Background polling loop (runs every 45 seconds to guarantee push alerts even if no clients are online)
+setInterval(async () => {
+    if (subscriptions.length === 0) return;
+    try {
+        const data = await fetchFootballData('/competitions/WC/matches');
+        const matches = data?.matches || [];
+        detectAndSendGoalPush(matches);
+    } catch(e) {
+        console.warn('[Proxy Push Polling] Erro background:', e.message);
+    }
+}, 45000);
+
+// ── Endpoints de Push ──────────────────────────────────────────
+app.get('/api/notifications/vapidPublicKey', (req, res) => {
+    res.json({ publicKey: vapidKeys.publicKey });
+});
+
+app.post('/api/notifications/subscribe', (req, res) => {
+    const subscription = req.body;
+    if (!subscriptions.some(s => s.endpoint === subscription.endpoint)) {
+        subscriptions.push(subscription);
+        fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions));
+        console.log('[Push] Novo dispositivo inscrito!');
+    }
+    res.status(201).json({});
+});
 
 // ── Endpoint: todas as partidas ───────────────────────────────
 app.get('/wc2026/matches', async (req, res) => {

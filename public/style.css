@@ -1207,3 +1207,28 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     font-size: 2.5rem;
     text-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
+
+.btn-subscribe {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+    margin-right: 10px;
+}
+.btn-subscribe:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(16, 185, 129, 0.5);
+}
+.btn-subscribe.active {
+    background: rgba(255,255,255,0.1);
+    box-shadow: none;
+    color: var(--text-dim);
+    cursor: default;
+    transform: none;
+}
