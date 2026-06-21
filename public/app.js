@@ -31,6 +31,92 @@ let _cachedSimulation  = null;
 // Controle de fase: mata-mata só liberado após fase de grupos completa
 let _groupStageWasComplete = false;
 
+// ── PERSISTÊNCIA LOCAL (localStorage) ───────────────────────────────
+// Garante que os resultados da fase de grupos NUNCA se percam,
+// mesmo que a API falhe ou o usuário recarregue a página.
+//
+// Estratégia (custo ZERO — apenas browser nativo):
+//   1. A cada ciclo bem-sucedido, salva _liveResultsCache no localStorage
+//   2. Ao iniciar, mescla dados ao vivo com os resultados já persistidos
+//      (união: dados ao vivo têm prioridade; localStorage preenche lacunas)
+//   3. Ao encerrar a fase de grupos, salva snapshot imutável do Elo dinâmico
+//   4. O snapshot é usado como base fixa para toda a simulação do mata-mata
+//
+const _SKEY = {
+    results:  'bolao2026_v1_results',  // resultados processados da fase de grupos
+    eloSnap:  'bolao2026_v1_elo',      // snapshot Elo pós-fase de grupos (imutável)
+    meta:     'bolao2026_v1_meta'      // metadados: savedAt, finishedCount
+};
+
+function _saveResultsToStorage(results) {
+    if (!results || Object.keys(results).length === 0) return;
+    try {
+        localStorage.setItem(_SKEY.results, JSON.stringify(results));
+        localStorage.setItem(_SKEY.meta, JSON.stringify({
+            savedAt: new Date().toISOString(),
+            finishedCount: Object.keys(results).length
+        }));
+    } catch (e) {
+        console.warn('[Storage] Falha ao salvar resultados:', e.message);
+    }
+}
+
+function _loadResultsFromStorage() {
+    try {
+        const raw = localStorage.getItem(_SKEY.results);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && Object.keys(parsed).length > 0) return parsed;
+    } catch (e) { console.warn('[Storage] Falha ao carregar resultados:', e.message); }
+    return null;
+}
+
+// Une resultados ao vivo com resultados do localStorage.
+// Dados ao vivo têm prioridade; localStorage preenche o que a API não trouxe.
+// Resultados só crescem — nunca desaparecem — portanto a união é sempre segura.
+function _mergeWithStoredResults(liveResults) {
+    const stored = _loadResultsFromStorage();
+    if (!stored) return liveResults || {};
+    if (!liveResults || Object.keys(liveResults).length === 0) {
+        console.warn('[Storage] API sem dados — usando resultados do localStorage (' + Object.keys(stored).length + ' jogos)');
+        return stored;
+    }
+    // A API pode ter menos dados que o localStorage (falha parcial)
+    // Usa o localStorage como base e sobrescreve com dados ao vivo
+    const merged = { ...stored, ...liveResults };
+    if (Object.keys(merged).length > Object.keys(liveResults).length) {
+        console.info(`[Storage] 📦 Mesclado: ${Object.keys(liveResults).length} ao vivo + ${Object.keys(merged).length - Object.keys(liveResults).length} do localStorage`);
+    }
+    return merged;
+}
+
+// Snapshot imutável do Elo dinâmico após encerramento da fase de grupos.
+// Salvo UMA Única vez — serve como base fixa para o mata-mata inteiro.
+function _saveEloSnapshot(dynPts) {
+    if (localStorage.getItem(_SKEY.eloSnap)) return; // já existe — não sobrescreve
+    try {
+        localStorage.setItem(_SKEY.eloSnap, JSON.stringify({
+            pts: dynPts,
+            savedAt: new Date().toISOString(),
+            locked: true
+        }));
+        console.info('🔒 [Storage] Snapshot Elo pós-fase de grupos salvo permanentemente no localStorage.');
+    } catch (e) { console.warn('[Storage] Falha ao salvar snapshot Elo:', e.message); }
+}
+
+function _loadEloSnapshot() {
+    try {
+        const raw = localStorage.getItem(_SKEY.eloSnap);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed?.pts && Object.keys(parsed.pts).length > 0) {
+            console.info(`📦 [Storage] Snapshot Elo carregado (salvo em ${parsed.savedAt})`);
+            return parsed.pts;
+        }
+    } catch (e) { console.warn('[Storage] Falha ao carregar snapshot Elo:', e.message); }
+    return null;
+}
+
 // ── SECURITY ──────────────────────────────────────────────────
 function escapeHTML(str) {
     if (typeof str !== 'string') return '';
@@ -614,6 +700,12 @@ async function refresh() {
         window._upcomingMatchesCache = liveSource.upcomingMatches || [];
         window._hasScraperError  = liveSource.hasScraperError || false;
 
+        // ── PERSISTÊNCIA: salva e mescla com resultados históricos ────────
+        if (window._liveResultsCache && Object.keys(window._liveResultsCache).length > 0) {
+            _saveResultsToStorage(window._liveResultsCache);
+        }
+        window._liveResultsCache = _mergeWithStoredResults(window._liveResultsCache);
+
         const finishedCount = window._liveResultsCache
             ? Object.keys(window._liveResultsCache).length : 0;
         const hasLive = liveSource.hasLive || false;
@@ -631,6 +723,11 @@ async function refresh() {
                     || _cachedSimulation.source === 'groups_only') {
                 console.info(`[App] 🔄 Nova simulação completa (${finishedCount} jogos, grupos encerrados)`);
                 _lastFinishedCount = finishedCount;
+
+                // Salva snapshot Elo pós-grupos
+                const dynPts = computeDynamicElo(window._liveResultsCache);
+                _saveEloSnapshot(dynPts);
+
                 _cachedSimulation  = runHybridSimulation(window._liveResultsCache);
                 _cachedSimulation.groupStageComplete = true;
             } else {

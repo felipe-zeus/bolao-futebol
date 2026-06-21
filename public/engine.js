@@ -88,14 +88,25 @@ function getFifaRank(teamName) {
     return entry ? entry.rank : 99;
 }
 
-// ── ELO DINÂMICO ──────────────────────────────────────────────
+// ── ELO DINÂMICO ──────────────────────────────────────────
 // Recalcula os pontos de cada seleção após cada resultado real.
-// Fórmula FIFA: ΔPts = K × (W − We)
-//   K  = 60 (peso Copa do Mundo — máximo na escala FIFA)
-//   W  = resultado real:  1 = vitória, 0.5 = empate, 0 = derrota
-//   We = probabilidade esperada (winProbability com pontos atuais)
 //
-// Resultado: seleções que surpreenderam (ex: zebra) sobem bastante;
+// Fórmula oficial FIFA (desde Agosto 2018):
+//   P = P_before + I × (W − We)
+//   We = 1 / (1 + 10^((Rb - Ra) / 600))
+//
+// Fator de Importância (I) oficial por fase:
+//   I = 50  → Fase de Grupos + Oitavas de Final
+//   I = 60  → Quartas de Final em diante
+//
+// Esta função processa APENAS jogos da fase de grupos (I = 50).
+// O fator 60 será usado futuramente na simulação do mata-mata
+// quando os resultados reais do mata-mata estiverem disponíveis.
+//
+// W = resultado real: 1 = vitória, 0.5 = empate, 0 = derrota
+//   (0.75 para vitória por pênaltis — não ocorre na fase de grupos)
+//
+// Resultado: seleções que surpreenderam (ex: zebra) sobem;
 // favoritas que perderam caem — afetando a simulação dos próximos jogos.
 function computeDynamicElo(realResults) {
     // Copia os pontos base para não modificar FIFA_RANKINGS original
@@ -106,7 +117,8 @@ function computeDynamicElo(realResults) {
 
     if (!realResults) return dynPts;
 
-    const K = 60; // Copa do Mundo
+    const K = 50; // Copa do Mundo: Fase de Grupos e Oitavas (I=50 conforme FIFA oficial)
+                  // Quartas em diante usam I=60 — aplicado na simulação do mata-mata real
 
     for (const [matchKey, result] of Object.entries(realResults)) {
         if (result.homeScore < 0 || result.awayScore < 0) continue;
