@@ -307,7 +307,11 @@ function _buildResultsFromProxy(data) {
         const away = normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || '');
         const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0;
         const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0;
-        const minute    = m.minute || null;
+        let minute = m.minute || null;
+        if (!minute && ['IN_PLAY', 'PAUSED', 'HALF_TIME'].includes(m.status)) {
+            if (m.status === 'HALF_TIME') minute = 'Intervalo';
+            else minute = 'LIVE';
+        }
         if (!home || !away) return;
         liveScores[`${home} vs ${away}`] = { homeScore, awayScore, minute, status: 'in_play', source: 'football-data.org' };
     });
