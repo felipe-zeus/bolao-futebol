@@ -641,6 +641,7 @@ function renderNextMatchPreview() {
     let displayTime = matchData.time || 'A definir';
     if (matchData.utcDate) {
         const d = new Date(matchData.utcDate);
+        d.setHours(d.getHours() + 2);
         displayTime = d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ' às');
     }
 
@@ -1041,6 +1042,14 @@ async function setupPushNotifications() {
         }
 
         btn.addEventListener('click', async () => {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+            if (isIOS && !isStandalone) {
+                alert('📱 Atenção usuário de iPhone!\n\nPara ativar os alertas de gol, a Apple exige que você instale este Web App primeiro:\n\n1. Toque no botão "Compartilhar" (quadrado com seta para cima) na barra inferior do Safari.\n2. Escolha "Adicionar à Tela de Início".\n3. Abra o Bolão pelo novo ícone na sua tela inicial e clique em Alertas novamente!');
+                return;
+            }
+
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') {
                 alert('Permissão negada. Ative nas configurações do navegador.');
