@@ -348,8 +348,9 @@ function countFinishedGroupMatches(liveResults) {
 
 // Constrói a visão da fase de grupos sem o mata-mata simulado
 // Usado enquanto a fase de grupos ainda não encerrou
-function buildGroupsOnlyView(liveResults) {
-    const dynPts = computeDynamicElo(liveResults);
+function buildGroupsOnlyView(liveResults, liveScores = {}) {
+    const dynPts = computeDynamicElo(liveResults); // Elo só atualiza com jogos encerrados
+    const combinedResults = { ...(liveResults || {}), ...(liveScores || {}) };
     const groupResults = {};
 
     for (const [groupName, teams] of Object.entries(WORLD_CUP_2026_GROUPS)) {
@@ -367,12 +368,12 @@ function buildGroupsOnlyView(liveResults) {
                 const away = standings[j];
                 const key1 = `${home.name} vs ${away.name}`;
                 const key2 = `${away.name} vs ${home.name}`;
-                const real = liveResults?.[key1] || liveResults?.[key2];
+                const real = combinedResults[key1] || combinedResults[key2];
 
                 if (real && real.homeScore >= 0 && real.awayScore >= 0) {
-                    // Resultado real encerrado
+                    // Resultado encerrado ou em andamento
                     let hs, as;
-                    if (real === liveResults?.[key1]) {
+                    if (real === combinedResults[key1]) {
                         hs = real.homeScore;
                         as = real.awayScore;
                     } else {

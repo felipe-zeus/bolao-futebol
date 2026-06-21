@@ -742,7 +742,7 @@ async function refresh() {
             if (finishedCount !== _lastFinishedCount || _cachedSimulation === null) {
                 console.info(`[App] 📊 Grupos em andamento (${finishedCount}/${getTotalGroupMatches()} jogos encerrados)`);
                 _lastFinishedCount = finishedCount;
-                _cachedSimulation  = buildGroupsOnlyView(window._liveResultsCache);
+                _cachedSimulation  = buildGroupsOnlyView(window._liveResultsCache, window._liveScoresCache);
                 _cachedSimulation.groupStageComplete = false;
             } else {
                 console.info(`[App] ⏳ Aguardando mais jogos (${finishedCount}/${getTotalGroupMatches()} encerrados)`);
