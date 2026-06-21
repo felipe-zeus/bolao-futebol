@@ -179,7 +179,7 @@ function sendPushToAll(title, body) {
     });
 }
 
-// Background polling loop (runs every 45 seconds to guarantee push alerts even if no clients are online)
+// Background polling loop (runs every 10 seconds to guarantee ultra-fast push alerts without hitting the 10 req/min rate limit)
 setInterval(async () => {
     if (subscriptions.length === 0) return;
     try {
@@ -189,7 +189,7 @@ setInterval(async () => {
     } catch(e) {
         console.warn('[Proxy Push Polling] Erro background:', e.message);
     }
-}, 45000);
+}, 10000);
 
 // ── Endpoints de Push ──────────────────────────────────────────
 app.get('/api/notifications/vapidPublicKey', (req, res) => {
