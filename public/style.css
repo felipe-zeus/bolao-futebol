@@ -4,8 +4,8 @@
     --br-blue: #140d2b;      /* Dark purple/navy for header */
     --br-green-dark: #008744; /* Darker neon green */
     --br-green: #00ff66;      /* WC26 Neon Green */
-    --br-yellow: #ff007f;     /* WC26 Magenta/Pink (replacing yellow) */
-    --br-yellow-glow: rgba(255, 0, 127, 0.4);
+    --br-yellow: #fedb00;     /* Electric Brazil Yellow */
+    --br-yellow-glow: rgba(254, 219, 0, 0.4);
     --wc-cyan: #00ffff;       /* WC26 Cyan */
     
     /* Text */
@@ -61,7 +61,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 
 .blob-1 {
     width: 600px; height: 600px;
-    background: var(--br-yellow); /* Magenta */
+    background: var(--br-yellow); /* Yellow */
     top: -200px; left: -200px;
     animation-delay: 0s;
 }
