@@ -309,8 +309,19 @@ function _buildResultsFromProxy(data) {
         const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0;
         let minute = m.minute || null;
         if (!minute && ['IN_PLAY', 'PAUSED', 'HALF_TIME'].includes(m.status)) {
-            if (m.status === 'HALF_TIME') minute = 'Intervalo';
-            else minute = 'LIVE';
+            if (m.utcDate) {
+                const elapsedMins = Math.floor((new Date() - new Date(m.utcDate)) / 60000);
+                if (elapsedMins < 0) minute = 'A começar';
+                else if (elapsedMins <= 45) minute = `${elapsedMins}'`;
+                else if (elapsedMins < 60) minute = 'Intervalo';
+                else {
+                    let secondHalf = elapsedMins - 15;
+                    minute = secondHalf > 90 ? '90+\'' : `${secondHalf}'`;
+                }
+            } else {
+                if (m.status === 'HALF_TIME') minute = 'Intervalo';
+                else minute = '🔴 AO VIVO';
+            }
         }
         if (!home || !away) return;
         liveScores[`${home} vs ${away}`] = { homeScore, awayScore, minute, status: 'in_play', source: 'football-data.org' };
