@@ -853,31 +853,51 @@ document.addEventListener('DOMContentLoaded', () => {
         mainTitle.title = 'Clique para simular um Gol!';
         mainTitle.addEventListener('click', () => {
             if (window.triggerGoalAnimation) {
-                window.triggerGoalAnimation('Espanha', 'Cabo Verde');
+                const liveMatches = window._liveScoresCache ? Object.keys(window._liveScoresCache) : [];
+                if (liveMatches.length > 0) {
+                    const parts = liveMatches[0].split(' vs ');
+                    window.triggerGoalAnimation(parts[0], parts[0], parts[1]);
+                } else {
+                    window.triggerGoalAnimation('Espanha', 'Espanha', 'Seleção Rival');
+                }
             }
         });
     }
 });
 
 window._previousScores = {};
+window._previousHomeScores = {};
+window._previousAwayScores = {};
 
-window.triggerGoalAnimation = function(homeName, awayName) {
+window.triggerGoalAnimation = function(scoringTeam, homeName, awayName) {
     const overlay = document.createElement('div');
     overlay.className = 'goal-overlay';
     overlay.innerHTML = `
-        <div class="goal-text">GOOOOL! ⚽</div>
+        <div class="goal-net"></div>
+        <div class="goal-ball">⚽</div>
+        <div class="goal-text">GOL DA ${tTeam(scoringTeam).toUpperCase()}!</div>
         <div class="goal-teams">${tTeam(homeName)} vs ${tTeam(awayName)}</div>
     `;
     document.body.appendChild(overlay);
 
-    const audio = new Audio('https://www.myinstants.com/media/sounds/stadium-cheer.mp3');
-    audio.volume = 0.8;
-    audio.play().catch(e => console.warn('Audio blocked by browser autoplay policy:', e));
+    const audio = new Audio('https://www.myinstants.com/media/sounds/gol_1.mp3');
+    audio.volume = 0.9;
+    audio.play().catch(e => console.warn('Audio blocked:', e));
+
+    if (typeof confetti === 'function') {
+        confetti({
+            particleCount: 200,
+            spread: 120,
+            origin: { y: 0.6 },
+            colors: ['#fedb00', '#00ff66', '#00ffff', '#ffffff']
+        });
+        setTimeout(() => confetti({ particleCount: 100, spread: 160, origin: { y: 0.7 }}), 600);
+    }
 
     setTimeout(() => {
         overlay.classList.add('fade-out');
         setTimeout(() => overlay.remove(), 1000);
-    }, 4000);
+    }, 4500);
 };
 
 // ── RENDER LIVE MATCHES ──────────────────────────────────────
@@ -929,9 +949,13 @@ function renderLiveMatches(liveScores, groups) {
         
         const currentGoals = m.homeScore + m.awayScore;
         if (window._previousScores[key] !== undefined && currentGoals > window._previousScores[key]) {
-            window.triggerGoalAnimation(homeName, awayName);
+            const prevHome = window._previousHomeScores[key] || 0;
+            let scoringTeam = m.homeScore > prevHome ? homeName : awayName;
+            window.triggerGoalAnimation(scoringTeam, homeName, awayName);
         }
         window._previousScores[key] = currentGoals;
+        window._previousHomeScores[key] = m.homeScore;
+        window._previousAwayScores[key] = m.awayScore;
         
         const homeScorersHtml = (m.homeScorers || []).map(s => `<div>${escapeHTML(s)}</div>`).join('');
         const awayScorersHtml = (m.awayScorers || []).map(s => `<div>${escapeHTML(s)}</div>`).join('');

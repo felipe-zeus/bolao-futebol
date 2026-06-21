@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* World Cup 2026 "WE ARE 26" Palette */
     --br-blue-deep: #0a0a0f; /* Deep dark background */
     --br-blue: #140d2b;      /* Dark purple/navy for header */
@@ -408,7 +408,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     color: var(--text-dark);
 }
 
-/* Ponto verde sutil — indica que há resultado real integrado */
+/* Ponto verde sutil â€” indica que hÃ¡ resultado real integrado */
 .real-badge {
     display: inline-block;
     width: 6px;
@@ -582,7 +582,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     50%       { box-shadow: 0 0 20px rgba(255, 60, 60, 0.8), 0 0 40px rgba(255, 60, 60, 0.3); }
 }
 
-/* Placar ao vivo — pulsante em vermelho */
+/* Placar ao vivo â€” pulsante em vermelho */
 .match-score.live-score {
     background: linear-gradient(135deg, #c0392b, #e74c3c);
     color: #fff;
@@ -606,7 +606,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     line-height: 1;
 }
 
-/* Item de partida em andamento — borda lateral vermelha */
+/* Item de partida em andamento â€” borda lateral vermelha */
 .live-match {
     border-left: 3px solid #e74c3c !important;
     animation: liveGlow 2s ease-in-out infinite;
@@ -621,9 +621,9 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     .header-controls { justify-content: space-between; width: 100%; }
 }
 
-/* ════════════════════════════════════════════════════════
-   BARRA DE PROGRESSO — FASE DE GRUPOS EM ANDAMENTO
-════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   BARRA DE PROGRESSO â€” FASE DE GRUPOS EM ANDAMENTO
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .group-progress-bar {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(254, 219, 0, 0.2);
@@ -710,9 +710,9 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     white-space: nowrap;
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TABELA DETALHADA DE GRUPOS (J V E D GP GC SG Pts)
-════════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .group-card--detailed {
     min-width: 0;
     overflow: hidden;
@@ -772,7 +772,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     font-size: 1rem !important;
 }
 
-/* Terceiro colocado — pode se classificar (8 melhores) */
+/* Terceiro colocado â€” pode se classificar (8 melhores) */
 .third-place {
     border-left: 2px solid rgba(254, 219, 0, 0.35) !important;
     background: rgba(254, 219, 0, 0.03) !important;
@@ -785,7 +785,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 }
 
 @media (max-width: 900px) {
-    /* Em telas menores, remove GP/GC/SG para dar mais espaço ao nome */
+    /* Em telas menores, remove GP/GC/SG para dar mais espaÃ§o ao nome */
     .group-table-header {
         grid-template-columns: minmax(80px, 1.5fr) repeat(5, 1.4rem);
     }
@@ -818,7 +818,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     .groups-grid { grid-template-columns: 1fr; }
 }
 
-/* ── LIVE MATCH WIDGET ────────────────────────────────────────── */
+/* â”€â”€ LIVE MATCH WIDGET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #live-matches-section {
     display: flex;
     flex-direction: column;
@@ -953,9 +953,9 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     opacity: 0.5;
 }
 
-/* ════════════════════════════════════════════════════════
-   WIDGET: PRÓXIMO JOGO (HYPE PREVIEW)
-════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   WIDGET: PRÃ“XIMO JOGO (HYPE PREVIEW)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .next-match-widget {
     background: linear-gradient(135deg, rgba(20,20,30,0.8), rgba(10,10,15,0.9));
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1070,44 +1070,92 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     border: 1px solid rgba(255,255,255,0.05);
 }
 
+
 /* ── GOAL ANIMATION OVERLAY ──────────────────────────── */
 .goal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.95) 100%);
     z-index: 9999;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    animation: flashGoal 0.5s infinite alternate;
+    overflow: hidden;
 }
-.goal-overlay.fade-out {
-    animation: fadeOut 1s forwards;
+
+.goal-net {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+        linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%, rgba(255,255,255,0.05)), 
+        linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%, rgba(255,255,255,0.05));
+    background-size: 40px 40px;
+    background-position: 0 0, 20px 20px;
+    opacity: 0;
+    animation: netShake 0.5s ease-out forwards;
+    animation-delay: 0.5s;
 }
+
+.goal-ball {
+    position: absolute;
+    font-size: 20rem;
+    line-height: 1;
+    text-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+    animation: ballShoot 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
 .goal-text {
-    font-size: 6rem;
+    font-size: 7rem;
     font-weight: 900;
     color: var(--br-yellow);
-    text-shadow: 0 0 20px var(--br-yellow-glow), 0 0 40px var(--br-yellow);
-    animation: scaleGoal 1s ease-out;
+    text-shadow: 0 0 20px var(--br-yellow-glow), 0 0 50px var(--br-yellow), 2px 2px 0px #000;
+    transform: scale(0);
+    opacity: 0;
+    z-index: 2;
+    animation: textPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation-delay: 0.6s;
 }
+
 .goal-teams {
     font-size: 2.5rem;
     color: #fff;
-    margin-top: 20px;
+    margin-top: 10px;
     font-weight: bold;
     text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    opacity: 0;
+    z-index: 2;
+    transform: translateY(20px);
+    animation: slideUp 0.5s ease-out forwards;
+    animation-delay: 1s;
 }
 
-@keyframes flashGoal {
-    0% { background: rgba(0,0,0,0.85); }
-    100% { background: rgba(30, 0, 0, 0.95); }
+.goal-overlay.fade-out {
+    animation: fadeOut 1s forwards;
 }
-@keyframes scaleGoal {
-    0% { transform: scale(0.2); opacity: 0; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(1); }
+
+@keyframes ballShoot {
+    0% { transform: scale(0) rotate(-180deg) translateY(100%); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: scale(1) rotate(0deg) translateY(-10%); opacity: 1; }
+}
+@keyframes netShake {
+    0% { opacity: 0; transform: scale(1); }
+    20% { opacity: 1; transform: scale(1.05) translate(10px, 10px); }
+    40% { transform: scale(1.02) translate(-10px, -5px); }
+    60% { transform: scale(1.04) translate(5px, 5px); }
+    80% { transform: scale(1.01) translate(-2px, -2px); }
+    100% { opacity: 1; transform: scale(1) translate(0, 0); }
+}
+@keyframes textPop {
+    0% { transform: scale(0); opacity: 0; }
+    80% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes slideUp {
+    to { transform: translateY(0); opacity: 1; }
 }
 @keyframes fadeOut {
     to { opacity: 0; visibility: hidden; }
