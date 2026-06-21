@@ -774,7 +774,7 @@ async function refresh() {
 //   45s → horário de jogo (12h–23h hora local)
 //   90s → fora do horário
 function getPollingInterval(hasLive) {
-    if (hasLive) return 20;
+    if (hasLive) return 60;
     const hour = new Date().getHours();
     // Copa do Mundo 2026: jogos entre 12h e 23h (BRT)
     const isGameHour = hour >= 12 && hour <= 23;
@@ -847,6 +847,27 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
 });
 
+window._previousScores = {};
+
+function triggerGoalAnimation(homeName, awayName) {
+    const overlay = document.createElement('div');
+    overlay.className = 'goal-overlay';
+    overlay.innerHTML = `
+        <div class="goal-text">GOOOOL! ⚽</div>
+        <div class="goal-teams">${tTeam(homeName)} vs ${tTeam(awayName)}</div>
+    `;
+    document.body.appendChild(overlay);
+
+    const audio = new Audio('https://www.myinstants.com/media/sounds/stadium-cheer.mp3');
+    audio.volume = 0.8;
+    audio.play().catch(e => console.warn('Audio blocked by browser autoplay policy:', e));
+
+    setTimeout(() => {
+        overlay.classList.add('fade-out');
+        setTimeout(() => overlay.remove(), 1000);
+    }, 4000);
+}
+
 // ── RENDER LIVE MATCHES ──────────────────────────────────────
 function renderLiveMatches(liveScores, groups) {
     const sec = document.getElementById('live-matches-section');
@@ -893,6 +914,12 @@ function renderLiveMatches(liveScores, groups) {
         
         const card = document.createElement('div');
         card.className = 'live-match-widget';
+        
+        const currentGoals = m.homeScore + m.awayScore;
+        if (window._previousScores[key] !== undefined && currentGoals > window._previousScores[key]) {
+            triggerGoalAnimation(homeName, awayName);
+        }
+        window._previousScores[key] = currentGoals;
         
         const homeScorersHtml = (m.homeScorers || []).map(s => `<div>${escapeHTML(s)}</div>`).join('');
         const awayScorersHtml = (m.awayScorers || []).map(s => `<div>${escapeHTML(s)}</div>`).join('');

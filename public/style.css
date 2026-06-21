@@ -1069,3 +1069,46 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     white-space: nowrap;
     border: 1px solid rgba(255,255,255,0.05);
 }
+
+/* ── GOAL ANIMATION OVERLAY ──────────────────────────── */
+.goal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    animation: flashGoal 0.5s infinite alternate;
+}
+.goal-overlay.fade-out {
+    animation: fadeOut 1s forwards;
+}
+.goal-text {
+    font-size: 6rem;
+    font-weight: 900;
+    color: var(--br-yellow);
+    text-shadow: 0 0 20px var(--br-yellow-glow), 0 0 40px var(--br-yellow);
+    animation: scaleGoal 1s ease-out;
+}
+.goal-teams {
+    font-size: 2.5rem;
+    color: #fff;
+    margin-top: 20px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+@keyframes flashGoal {
+    0% { background: rgba(0,0,0,0.85); }
+    100% { background: rgba(30, 0, 0, 0.95); }
+}
+@keyframes scaleGoal {
+    0% { transform: scale(0.2); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); }
+}
+@keyframes fadeOut {
+    to { opacity: 0; visibility: hidden; }
+}
