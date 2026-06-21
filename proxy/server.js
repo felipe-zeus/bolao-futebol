@@ -244,6 +244,46 @@ app.get('/wc2026/live', async (req, res) => {
         const inPlay   = matches.filter(m => ['IN_PLAY', 'PAUSED', 'HALF_TIME'].includes(m.status));
         const upcoming = matches.filter(m => ['TIMED', 'SCHEDULED'].includes(m.status));
 
+        // ── SISTEMA ANTI-VAR (Overrides Manuais) ───────────────────
+        try {
+            const overridesPath = path.join(__dirname, 'overrides.json');
+            if (fs.existsSync(overridesPath)) {
+                // Remove require cache para ler sempre o mais recente
+                delete require.cache[require.resolve('./overrides.json')];
+                const overrides = require('./overrides.json');
+                
+                if (overrides && overrides.matches) {
+                    const applyOverrides = (arr) => {
+                        arr.forEach(m => {
+                            const ov = overrides.matches[m.id];
+                            if (ov) {
+                                if (ov.home !== undefined) {
+                                    m.score = m.score || {};
+                                    m.score.fullTime = m.score.fullTime || {};
+                                    m.score.fullTime.home = ov.home;
+                                }
+                                if (ov.away !== undefined) {
+                                    m.score = m.score || {};
+                                    m.score.fullTime = m.score.fullTime || {};
+                                    m.score.fullTime.away = ov.away;
+                                }
+                                if (ov.status !== undefined) {
+                                    m.status = ov.status;
+                                }
+                                console.log(`[VAR Override] Jogo ${m.id} corrigido: ${m.homeTeam?.name} ${ov.home} x ${ov.away} ${m.awayTeam?.name}`);
+                            }
+                        });
+                    };
+                    applyOverrides(finished);
+                    applyOverrides(inPlay);
+                    applyOverrides(upcoming);
+                }
+            }
+        } catch(e) {
+            console.error('[Proxy] Erro ao aplicar overrides de VAR:', e.message);
+        }
+        // ──────────────────────────────────────────────────────────────
+
         const upcomingSorted = upcoming.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
         const nextMatch      = upcomingSorted[0] || null;
 
