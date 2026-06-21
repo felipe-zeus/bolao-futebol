@@ -1,20 +1,21 @@
 :root {
-    /* World Cup Brazil Palette */
-    --br-blue-deep: #011638; /* Navy stadium background */
-    --br-blue: #012169;
-    --br-green-dark: #004d2e;
-    --br-green: #009c3b;
-    --br-yellow: #fedb00;
-    --br-yellow-glow: rgba(254, 219, 0, 0.4);
+    /* World Cup 2026 "WE ARE 26" Palette */
+    --br-blue-deep: #0a0a0f; /* Deep dark background */
+    --br-blue: #140d2b;      /* Dark purple/navy for header */
+    --br-green-dark: #008744; /* Darker neon green */
+    --br-green: #00ff66;      /* WC26 Neon Green */
+    --br-yellow: #ff007f;     /* WC26 Magenta/Pink (replacing yellow) */
+    --br-yellow-glow: rgba(255, 0, 127, 0.4);
+    --wc-cyan: #00ffff;       /* WC26 Cyan */
     
     /* Text */
     --text-main: #ffffff;
-    --text-dim: #9ca3af;
-    --text-dark: #011638;
+    --text-dim: #a0a0b0;
+    --text-dark: #000000;
     
     /* Layout */
-    --sport-radius: 0.5rem;
-    --transition: 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy */
+    --sport-radius: 0.8rem;
+    --transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 *, *::before, *::after { 
@@ -41,27 +42,59 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     line-height: 1;
 }
 
-/* --- Atmospheric Background --- */
-.stadium-pattern {
+/* --- Dynamic Animated Background (WE ARE 26) --- */
+.animated-bg {
     position: fixed;
     inset: 0;
     z-index: -2;
-    background: repeating-linear-gradient(
-        -45deg,
-        rgba(0, 156, 59, 0.03),
-        rgba(0, 156, 59, 0.03) 20px,
-        rgba(1, 33, 105, 0.05) 20px,
-        rgba(1, 33, 105, 0.05) 40px
-    );
+    background: var(--br-blue-deep);
+    overflow: hidden;
 }
 
-.glow-bg {
+.blob {
+    position: absolute;
+    filter: blur(80px);
+    opacity: 0.6;
+    border-radius: 50%;
+    animation: floatBlob 20s infinite alternate ease-in-out;
+}
+
+.blob-1 {
+    width: 600px; height: 600px;
+    background: var(--br-yellow); /* Magenta */
+    top: -200px; left: -200px;
+    animation-delay: 0s;
+}
+
+.blob-2 {
+    width: 500px; height: 500px;
+    background: var(--wc-cyan); /* Cyan */
+    bottom: -100px; right: -100px;
+    animation-delay: -5s;
+    animation-duration: 25s;
+}
+
+.blob-3 {
+    width: 400px; height: 400px;
+    background: var(--br-green); /* Neon Green */
+    top: 40%; left: 50%;
+    animation-delay: -10s;
+    animation-duration: 30s;
+}
+
+@keyframes floatBlob {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(100px, 50px) scale(1.2); }
+    100% { transform: translate(-50px, 150px) scale(0.8); }
+}
+
+.bg-overlay {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    inset: 0;
     z-index: -1;
-    background: radial-gradient(circle at 50% 0%, rgba(0, 156, 59, 0.15) 0%, transparent 60%),
-                radial-gradient(circle at 10% 80%, rgba(254, 219, 0, 0.08) 0%, transparent 40%);
-    pointer-events: none;
+    background: rgba(10, 10, 15, 0.7);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
 }
 
 /* --- Sport Header --- */
@@ -207,20 +240,22 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 
 /* --- Sport Panels (Cards) --- */
 .glass-card {
-    background: rgba(1, 33, 105, 0.6);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-top: 5px solid var(--br-green);
+    background: rgba(20, 13, 43, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top: 4px solid var(--br-green);
     border-radius: var(--sport-radius);
     padding: 2rem;
     position: relative;
     box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-    transition: transform var(--transition), box-shadow var(--transition);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
 }
 
 .glass-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 45px rgba(0, 156, 59, 0.2);
+    box-shadow: 0 20px 45px rgba(0, 255, 102, 0.15);
+    border-color: rgba(255,255,255,0.2);
 }
 
 .glass-card h2 {

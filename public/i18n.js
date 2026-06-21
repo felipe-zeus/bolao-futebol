@@ -1,7 +1,7 @@
 const translations = {
     pt: {
         // Header / título
-        title: "🏆 Bolão Copa do Mundo 2026",
+        title: "🏆 Simulador - Copa do Mundo 2026",
         subtitle: "Simulador baseado no Ranking Oficial FIFA • Dados em Tempo Real",
 
         // Status badge

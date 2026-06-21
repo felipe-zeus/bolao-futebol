@@ -601,7 +601,7 @@ function renderApp() {
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === currentLang);
     });
-    document.title = t('title').replace(/^🏆\s*/, '') || 'Bolão Copa do Mundo 2026';
+    document.title = t('title').replace(/^🏆\s*/, '') || 'Simulador - Copa do Mundo 2026';
 
     // RENDERIZA JOGOS AO VIVO E PREVIEW
     renderLiveMatches(window._liveScoresCache, data.groups);
