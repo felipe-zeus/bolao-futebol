@@ -26,16 +26,13 @@ app.use(helmet());
 app.use(express.json()); // Parse JSON body for Push Subscriptions
 
 const webpush = require('web-push');
+const os = require('os');
 
 // Setup VAPID Keys for Push Notifications
-const VAPID_KEYS_FILE = path.join(__dirname, 'vapidKeys.json');
-let vapidKeys = {};
-if (fs.existsSync(VAPID_KEYS_FILE)) {
-    vapidKeys = JSON.parse(fs.readFileSync(VAPID_KEYS_FILE, 'utf8'));
-} else {
-    vapidKeys = webpush.generateVAPIDKeys();
-    fs.writeFileSync(VAPID_KEYS_FILE, JSON.stringify(vapidKeys));
-}
+let vapidKeys = {
+    publicKey: process.env.VAPID_PUBLIC_KEY || 'BAAqdl3VDxo1EWUHEcE8ZynkrCvtR5TFvhqel-oc5p1w-9kahXY_qRgXwy2T03BbEtKUZFf0zRjUPD_FQHsslv0',
+    privateKey: process.env.VAPID_PRIVATE_KEY || 'XYd4v3JlgilejKKQzmIeDD7zXHViIHFYqtUcpTSjTtQ'
+};
 
 webpush.setVapidDetails(
     'mailto:contato@bolao26.com',
@@ -43,10 +40,14 @@ webpush.setVapidDetails(
     vapidKeys.privateKey
 );
 
-const SUBSCRIPTIONS_FILE = path.join(__dirname, 'subscriptions.json');
+const SUBSCRIPTIONS_FILE = path.join(os.tmpdir(), 'subscriptions.json');
 let subscriptions = [];
-if (fs.existsSync(SUBSCRIPTIONS_FILE)) {
-    subscriptions = JSON.parse(fs.readFileSync(SUBSCRIPTIONS_FILE, 'utf8'));
+try {
+    if (fs.existsSync(SUBSCRIPTIONS_FILE)) {
+        subscriptions = JSON.parse(fs.readFileSync(SUBSCRIPTIONS_FILE, 'utf8'));
+    }
+} catch (e) {
+    console.warn('Erro ao ler subscriptions:', e.message);
 }
 
 // ── 2. Rate Limiting (Bloqueio de DDoS) ────────────────────────
@@ -173,7 +174,7 @@ function sendPushToAll(title, body) {
         webpush.sendNotification(sub, payload).catch(err => {
             if (err.statusCode === 410 || err.statusCode === 404) {
                 subscriptions = subscriptions.filter(s => s.endpoint !== sub.endpoint);
-                fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions));
+                try { fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions)); } catch(e){}
             }
         });
     });
@@ -200,7 +201,7 @@ app.post('/api/notifications/subscribe', (req, res) => {
     const subscription = req.body;
     if (!subscriptions.some(s => s.endpoint === subscription.endpoint)) {
         subscriptions.push(subscription);
-        fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions));
+        try { fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions)); } catch(e){}
         console.log('[Push] Novo dispositivo inscrito!');
     }
     res.status(201).json({});

@@ -30,18 +30,18 @@
                 </div>
             </div>
             <div class="header-controls">
-                <div id="data-status" class="status-badge">
-                    <span class="pulse-dot"></span>
-                    <span id="status-text">🔵 Simulação</span>
+                <div class="controls-row">
+                    <div id="data-status" class="status-badge">
+                        <span class="pulse-dot"></span>
+                        <span id="status-text">🔵 Simulação</span>
+                    </div>
+                    <button id="btn-subscribe" class="btn-subscribe" title="Ativar Alertas de Gols">🔔 Alertas</button>
                 </div>
                 <div id="next-update-countdown" class="countdown-badge" onclick="refresh()" style="display: none !important; cursor: pointer;" title="Clique para forçar atualização"></div>
-                <div class="top-bar-right">
-                    <button id="btn-subscribe" class="btn-subscribe" title="Ativar Alertas de Gols">🔔 Alertas</button>
-                    <div class="lang-switcher">
-                        <button class="lang-btn" data-lang="pt" onclick="setLang('pt')">🇧🇷 PT</button>
-                        <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
-                        <button class="lang-btn" data-lang="es" onclick="setLang('es')">🇪🇸 ES</button>
-                    </div>
+                <div class="lang-switcher">
+                    <button class="lang-btn" data-lang="pt" onclick="setLang('pt')">🇧🇷 PT</button>
+                    <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+                    <button class="lang-btn" data-lang="es" onclick="setLang('es')">🇪🇸 ES</button>
                 </div>
             </div>
         </div>
