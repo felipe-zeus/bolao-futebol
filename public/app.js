@@ -855,10 +855,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.triggerGoalAnimation) {
                 const liveMatches = window._liveScoresCache ? Object.keys(window._liveScoresCache) : [];
                 if (liveMatches.length > 0) {
+                    const match = window._liveScoresCache[liveMatches[0]];
                     const parts = liveMatches[0].split(' vs ');
-                    window.triggerGoalAnimation(parts[0], parts[0], parts[1]);
+                    window.triggerGoalAnimation(parts[0], parts[0], parts[1], match.homeScore, match.awayScore, match.homeScore + 1, match.awayScore);
                 } else {
-                    window.triggerGoalAnimation('Espanha', 'Espanha', 'Seleção Rival');
+                    window.triggerGoalAnimation('Espanha', 'Espanha', 'Seleção Rival', 3, 0, 4, 0);
                 }
             }
         });
@@ -869,16 +870,35 @@ window._previousScores = {};
 window._previousHomeScores = {};
 window._previousAwayScores = {};
 
-window.triggerGoalAnimation = function(scoringTeam, homeName, awayName) {
+window.triggerGoalAnimation = function(scoringTeam, homeName, awayName, prevHome, prevAway, newHome, newAway) {
     const overlay = document.createElement('div');
     overlay.className = 'goal-overlay';
     overlay.innerHTML = `
-        <div class="goal-net"></div>
         <div class="goal-ball">⚽</div>
         <div class="goal-text">GOL DA ${tTeam(scoringTeam).toUpperCase()}!</div>
-        <div class="goal-teams">${tTeam(homeName)} vs ${tTeam(awayName)}</div>
+        
+        <div class="goal-scoreboard">
+            <div class="goal-score-team">${tTeam(homeName)}</div>
+            <div class="goal-score-numbers">
+                <div class="goal-number home-number">
+                    <span class="old-num">${prevHome}</span>
+                    <span class="new-num">${newHome}</span>
+                </div>
+                <div class="goal-score-x">×</div>
+                <div class="goal-number away-number">
+                    <span class="old-num">${prevAway}</span>
+                    <span class="new-num">${newAway}</span>
+                </div>
+            </div>
+            <div class="goal-score-team">${tTeam(awayName)}</div>
+        </div>
     `;
     document.body.appendChild(overlay);
+
+    setTimeout(() => {
+        if (prevHome !== newHome) overlay.querySelector('.home-number').classList.add('flip');
+        if (prevAway !== newAway) overlay.querySelector('.away-number').classList.add('flip');
+    }, 1500);
 
     const audio = new Audio('https://www.myinstants.com/media/sounds/gol_1.mp3');
     audio.volume = 0.9;
@@ -897,7 +917,7 @@ window.triggerGoalAnimation = function(scoringTeam, homeName, awayName) {
     setTimeout(() => {
         overlay.classList.add('fade-out');
         setTimeout(() => overlay.remove(), 1000);
-    }, 4500);
+    }, 6000);
 };
 
 // ── RENDER LIVE MATCHES ──────────────────────────────────────
@@ -950,8 +970,9 @@ function renderLiveMatches(liveScores, groups) {
         const currentGoals = m.homeScore + m.awayScore;
         if (window._previousScores[key] !== undefined && currentGoals > window._previousScores[key]) {
             const prevHome = window._previousHomeScores[key] || 0;
+            const prevAway = window._previousAwayScores[key] || 0;
             let scoringTeam = m.homeScore > prevHome ? homeName : awayName;
-            window.triggerGoalAnimation(scoringTeam, homeName, awayName);
+            window.triggerGoalAnimation(scoringTeam, homeName, awayName, prevHome, prevAway, m.homeScore, m.awayScore);
         }
         window._previousScores[key] = currentGoals;
         window._previousHomeScores[key] = m.homeScore;

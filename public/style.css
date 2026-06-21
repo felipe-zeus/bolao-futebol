@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* World Cup 2026 "WE ARE 26" Palette */
     --br-blue-deep: #0a0a0f; /* Deep dark background */
     --br-blue: #140d2b;      /* Dark purple/navy for header */
@@ -1084,18 +1084,6 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     overflow: hidden;
 }
 
-.goal-net {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: 
-        linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%, rgba(255,255,255,0.05)), 
-        linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%, rgba(255,255,255,0.05));
-    background-size: 40px 40px;
-    background-position: 0 0, 20px 20px;
-    opacity: 0;
-    animation: netShake 0.5s ease-out forwards;
-    animation-delay: 0.5s;
-}
 
 .goal-ball {
     position: absolute;
@@ -1141,14 +1129,7 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
     50% { opacity: 1; }
     100% { transform: scale(1) rotate(0deg) translateY(-10%); opacity: 1; }
 }
-@keyframes netShake {
-    0% { opacity: 0; transform: scale(1); }
-    20% { opacity: 1; transform: scale(1.05) translate(10px, 10px); }
-    40% { transform: scale(1.02) translate(-10px, -5px); }
-    60% { transform: scale(1.04) translate(5px, 5px); }
-    80% { transform: scale(1.01) translate(-2px, -2px); }
-    100% { opacity: 1; transform: scale(1) translate(0, 0); }
-}
+
 @keyframes textPop {
     0% { transform: scale(0); opacity: 0; }
     80% { transform: scale(1.1); opacity: 1; }
@@ -1159,4 +1140,70 @@ h1, h2, h3, .champion-bg-text, .vs, .match-score, .ranking-pos {
 }
 @keyframes fadeOut {
     to { opacity: 0; visibility: hidden; }
+}
+
+/* ── SCOREBOARD FLIP ANIMATION ──────────────────────────── */
+.goal-scoreboard {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 5rem;
+    font-weight: 900;
+    color: white;
+    z-index: 3;
+    margin-top: 20px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideUp 0.5s ease-out forwards;
+    animation-delay: 1.2s;
+}
+
+.goal-score-numbers {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.5);
+    padding: 10px 30px;
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+}
+
+.goal-number {
+    position: relative;
+    width: 1.2em;
+    height: 1.2em;
+    perspective: 400px;
+}
+
+.old-num, .new-num {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backface-visibility: hidden;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.old-num {
+    transform: rotateX(0deg);
+}
+
+.new-num {
+    transform: rotateX(-180deg);
+    color: var(--br-yellow);
+}
+
+.goal-number.flip .old-num {
+    transform: rotateX(180deg);
+}
+
+.goal-number.flip .new-num {
+    transform: rotateX(0deg);
+}
+
+.goal-score-team {
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
