@@ -1050,7 +1050,7 @@ async function setupPushNotifications() {
             const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
             
             try {
-                const response = await fetch(${proxyUrl}/api/notifications/vapidPublicKey);
+                const response = await fetch(`${proxyUrl}/api/notifications/vapidPublicKey`);
                 if (!response.ok) throw new Error('Servidor indisponível para Web Push');
                 
                 const vapidData = await response.json();
@@ -1061,7 +1061,7 @@ async function setupPushNotifications() {
                     applicationServerKey: convertedVapidKey
                 });
 
-                await fetch(${proxyUrl}/api/notifications/subscribe, {
+                await fetch(`${proxyUrl}/api/notifications/subscribe`, {
                     method: 'POST',
                     body: JSON.stringify(sub),
                     headers: { 'Content-Type': 'application/json' }
