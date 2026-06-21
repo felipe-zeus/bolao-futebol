@@ -205,31 +205,7 @@ async function getDataSource() {
     let nextMatch = null;
     let upcomingMatches = [];
 
-    // ── CAMADA 1: worldcup26.ir ──────────────────────────────────
-    // Tentamos primeiro — sem consumir cota do proxy.
-    const layer1 = await fetchFromWorldCup26();
-    if (layer1) {
-        console.info(`[Live] ✅ ${layer1.source}: ${Object.keys(layer1.data).length} encerradas, ${Object.keys(layer1.liveScores).length} ao vivo`);
-        // Busca upcomingMatches do proxy em paralelo (não bloqueia se falhar)
-        try {
-            const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
-            const proxyRes = await fetch(`${proxyUrl}/wc2026/live`, { signal: AbortSignal.timeout(4000) });
-            if (proxyRes.ok) {
-                const proxyData = await proxyRes.json();
-                upcomingMatches = _parseUpcomingMatches(proxyData);
-                nextMatch = upcomingMatches[0] || null;
-            }
-        } catch (e) {
-            console.warn('[Live] upcomingMatches indisponível (proxy):', e.message);
-        }
-        layer1.nextMatch = nextMatch;
-        layer1.upcomingMatches = upcomingMatches;
-        return layer1;
-    }
-
-    // ── CAMADA 2: proxy football-data.org ────────────────────────
-    // Uma única chamada — resultado usado para dados E upcomingMatches.
-    console.warn('[Live] worldcup26.ir indisponível — tentando proxy football-data.org');
+    // ── CAMADA 1: proxy football-data.org (Mais confiável, atualiza em tempo real, sem limites graças ao cache do backend) ──
     let rawProxyData = null;
     try {
         const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
@@ -243,14 +219,23 @@ async function getDataSource() {
         upcomingMatches = _parseUpcomingMatches(rawProxyData);
         nextMatch = upcomingMatches[0] || null;
 
-        // Processa os dados do proxy como Camada 2
-        const layer2 = _buildResultsFromProxy(rawProxyData);
-        if (layer2) {
-            console.info(`[Live] ⚠️ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
-            layer2.nextMatch = nextMatch;
-            layer2.upcomingMatches = upcomingMatches;
-            return layer2;
+        const layer1 = _buildResultsFromProxy(rawProxyData);
+        if (layer1) {
+            console.info(`[Live] ✅ ${layer1.source}: ${Object.keys(layer1.data).length} encerradas, ${Object.keys(layer1.liveScores).length} ao vivo`);
+            layer1.nextMatch = nextMatch;
+            layer1.upcomingMatches = upcomingMatches;
+            return layer1;
         }
+    }
+
+    // ── CAMADA 2: worldcup26.ir (Fallback caso o proxy caia) ──
+    console.warn('[Live] Proxy indisponível ou sem dados — tentando worldcup26.ir');
+    const layer2 = await fetchFromWorldCup26();
+    if (layer2) {
+        console.info(`[Live] ⚠️ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
+        layer2.nextMatch = nextMatch;
+        layer2.upcomingMatches = upcomingMatches;
+        return layer2;
     }
 
     // ── CAMADA 3: Fallback estático ───────────────────────────────
