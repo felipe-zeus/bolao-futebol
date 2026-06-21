@@ -845,11 +845,23 @@ window.renderApp = renderApp;
 document.addEventListener('DOMContentLoaded', () => {
     setLang(currentLang);
     init();
+
+    // Easter egg para testar a animacao de gol
+    const mainTitle = document.querySelector('h1');
+    if (mainTitle) {
+        mainTitle.style.cursor = 'pointer';
+        mainTitle.title = 'Clique para simular um Gol!';
+        mainTitle.addEventListener('click', () => {
+            if (window.triggerGoalAnimation) {
+                window.triggerGoalAnimation('Espanha', 'Cabo Verde');
+            }
+        });
+    }
 });
 
 window._previousScores = {};
 
-function triggerGoalAnimation(homeName, awayName) {
+window.triggerGoalAnimation = function(homeName, awayName) {
     const overlay = document.createElement('div');
     overlay.className = 'goal-overlay';
     overlay.innerHTML = `
@@ -866,7 +878,7 @@ function triggerGoalAnimation(homeName, awayName) {
         overlay.classList.add('fade-out');
         setTimeout(() => overlay.remove(), 1000);
     }, 4000);
-}
+};
 
 // ── RENDER LIVE MATCHES ──────────────────────────────────────
 function renderLiveMatches(liveScores, groups) {
@@ -917,7 +929,7 @@ function renderLiveMatches(liveScores, groups) {
         
         const currentGoals = m.homeScore + m.awayScore;
         if (window._previousScores[key] !== undefined && currentGoals > window._previousScores[key]) {
-            triggerGoalAnimation(homeName, awayName);
+            window.triggerGoalAnimation(homeName, awayName);
         }
         window._previousScores[key] = currentGoals;
         
