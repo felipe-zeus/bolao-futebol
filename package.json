@@ -9,12 +9,14 @@
     "dev:frontend": "npx serve public -l 3001"
   },
   "dependencies": {
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.6",
     "csv-parser": "^3.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "cheerio": "^1.0.0",
-    "node-fetch": "^2.7.0",
+    "express-rate-limit": "^7.2.0",
     "helmet": "^7.1.0",
-    "express-rate-limit": "^7.2.0"
+    "node-fetch": "^2.7.0",
+    "web-push": "^3.6.7"
   }
 }
