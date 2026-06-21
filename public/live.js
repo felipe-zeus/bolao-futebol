@@ -142,27 +142,10 @@ async function fetchFromWorldCup26() {
             } catch (e) { return []; }
         }
 
-        // Tenta obter o minuto exato através do scraper
-        let exactMinute = null;
-        let hasScraperError = false;
-        
-        if (inPlay.length > 0) {
-            try {
-                const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
-                const scraperRes = await fetch(`${proxyUrl}/wc2026/live-minute`, { signal: AbortSignal.timeout(3000) });
-                if (scraperRes.ok) {
-                    const scraperData = await scraperRes.json();
-                    if (scraperData.scraper_broken) {
-                        hasScraperError = true;
-                    } else {
-                        exactMinute = scraperData.minute;
-                    }
-                }
-            } catch (err) {
-                console.warn('[Scraper] Erro de conexão com proxy scraper:', err.message);
-                hasScraperError = true;
-            }
-        }
+        // Minuto exato: usa o campo retornado pela própria API (time_elapsed / minute)
+        // O endpoint /wc2026/live-minute foi removido — era experimental e instável.
+        const exactMinute = null;
+        const hasScraperError = false;
 
         // Processa jogos em andamento (placar parcial)
         inPlay.forEach(m => {
@@ -203,134 +186,143 @@ async function fetchFromWorldCup26() {
 }
 
 // ── CAMADA 2: football-data.org via Proxy Local ─────────────────
-// O proxy (proxy/server.js) já possui a API key no .env.
-// O frontend chama o proxy na porta 3002 — sem necessidade de key no cliente.
-async function fetchFromProxy() {
-    try {
-        const proxyUrl = `${PROXY_URL}/wc2026/live`;
-        const res = await fetch(proxyUrl, {
-            signal: AbortSignal.timeout(6000)
-        });
-
-        if (!res.ok) throw new Error(`proxy status: ${res.status}`);
-        const data = await res.json();
-
-        const results = {};
-        const liveScores = {};
-
-        // Partidas encerradas → resultado fixo
-        (data.finished || []).forEach(m => {
-            const home = normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || '');
-            const away = normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || '');
-            const homeScore = m.score?.fullTime?.home ?? -1;
-            const awayScore = m.score?.fullTime?.away ?? -1;
-
-            if (!home || !away || homeScore < 0) return;
-
-            const winner = homeScore > awayScore ? home : awayScore > homeScore ? away : null;
-            results[`${home} vs ${away}`] = { winner, homeScore, awayScore, source: 'football-data.org', status: 'finished' };
-        });
-
-        // Partidas em andamento → placar parcial
-        (data.inPlay || []).forEach(m => {
-            const home = normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || '');
-            const away = normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || '');
-            const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0;
-            const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0;
-            const minute    = m.minute || null;
-
-            if (!home || !away) return;
-            liveScores[`${home} vs ${away}`] = {
-                homeScore, awayScore, minute,
-                status: 'in_play', source: 'football-data.org'
-            };
-        });
-
-        const hasData = Object.keys(results).length > 0 || Object.keys(liveScores).length > 0;
-        if (!hasData) return null;
-
-        return {
-            mode: 'live',
-            source: 'football-data.org',
-            data: results,
-            liveScores,
-            hasLive: data.hasLive || Object.keys(liveScores).length > 0,
-            nextMatch: data.nextMatch || null
-        };
-
-    } catch (e) {
-        console.warn('[Live] Proxy football-data.org falhou:', e.message);
-        return null;
-    }
-}
+// Agora gerenciada diretamente por getDataSource() via _buildResultsFromProxy().
+// A função fetchFromProxy() foi consolidada nos helpers internos abaixo.
 
 // ── FALLBACK ESTATICO ──────────────────────────────────────────
 const FALLBACK_RESULTS = {"Mexico vs South Africa":{"winner":"Mexico","homeScore":2,"awayScore":0,"source":"fallback","status":"finished"},"South Korea vs Czech Republic":{"winner":"South Korea","homeScore":2,"awayScore":1,"source":"fallback","status":"finished"},"Canada vs Bosnia and Herzegovina":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"United States vs Paraguay":{"winner":"United States","homeScore":4,"awayScore":1,"source":"fallback","status":"finished"},"Haiti vs Scotland":{"winner":"Scotland","homeScore":0,"awayScore":1,"source":"fallback","status":"finished"},"Australia vs Turkey":{"winner":"Australia","homeScore":2,"awayScore":0,"source":"fallback","status":"finished"},"Brazil vs Morocco":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Qatar vs Switzerland":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Ivory Coast vs Ecuador":{"winner":"Ivory Coast","homeScore":1,"awayScore":0,"source":"fallback","status":"finished"},"Germany vs Curaçao":{"winner":"Germany","homeScore":7,"awayScore":1,"source":"fallback","status":"finished"},"Netherlands vs Japan":{"winner":null,"homeScore":2,"awayScore":2,"source":"fallback","status":"finished"},"Sweden vs Tunisia":{"winner":"Sweden","homeScore":5,"awayScore":1,"source":"fallback","status":"finished"},"Iran vs New Zealand":{"winner":null,"homeScore":2,"awayScore":2,"source":"fallback","status":"finished"},"Spain vs Cape Verde":{"winner":null,"homeScore":0,"awayScore":0,"source":"fallback","status":"finished"},"Belgium vs Egypt":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Saudi Arabia vs Uruguay":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"France vs Senegal":{"winner":"France","homeScore":3,"awayScore":1,"source":"fallback","status":"finished"},"Iraq vs Norway":{"winner":"Norway","homeScore":1,"awayScore":4,"source":"fallback","status":"finished"},"Argentina vs Algeria":{"winner":"Argentina","homeScore":3,"awayScore":0,"source":"fallback","status":"finished"},"Austria vs Jordan":{"winner":"Austria","homeScore":3,"awayScore":1,"source":"fallback","status":"finished"},"Portugal vs Democratic Republic of the Congo":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"England vs Croatia":{"winner":"England","homeScore":4,"awayScore":2,"source":"fallback","status":"finished"},"Uzbekistan vs Colombia":{"winner":"Colombia","homeScore":1,"awayScore":3,"source":"fallback","status":"finished"},"Ghana vs Panama":{"winner":"Ghana","homeScore":1,"awayScore":0,"source":"fallback","status":"finished"},"Mexico vs South Korea":{"winner":"Mexico","homeScore":1,"awayScore":0,"source":"fallback","status":"finished"},"Switzerland vs Bosnia and Herzegovina":{"winner":"Switzerland","homeScore":4,"awayScore":1,"source":"fallback","status":"finished"},"Canada vs Qatar":{"winner":"Canada","homeScore":6,"awayScore":0,"source":"fallback","status":"finished"},"Czech Republic vs South Africa":{"winner":null,"homeScore":1,"awayScore":1,"source":"fallback","status":"finished"},"Scotland vs Morocco":{"winner":"Morocco","homeScore":0,"awayScore":1,"source":"fallback","status":"finished"},"United States vs Australia":{"winner":"United States","homeScore":2,"awayScore":0,"source":"fallback","status":"finished"}};
 
 // ── ORQUESTRADOR PRINCIPAL ──────────────────────────────────────
+// ARQUITETURA EM 3 CAMADAS:
+//   Camada 1: worldcup26.ir (gratuita, sem key, CORS aberto)
+//   Camada 2: football-data.org via proxy (uma única chamada por ciclo)
+//   Camada 3: Fallback estático
+//
+// OTIMIZAÇÃO: O proxy é chamado UMA ÚNICA VEZ por ciclo.
+// O resultado é reaproveitado tanto para upcomingMatches quanto
+// como fonte de dados (Camada 2), eliminando o double-fetch anterior.
 async function getDataSource() {
-    // Busca a próxima partida silenciosamente do proxy (Layer 2)
-    // independentemente de qual camada fornecer os resultados das partidas
     let nextMatch = null;
     let upcomingMatches = [];
-    try {
-        const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
-        const proxyRes = await fetch(`${proxyUrl}/wc2026/live`, { signal: AbortSignal.timeout(3000) });
-        if (proxyRes.ok) {
-            const proxyData = await proxyRes.json();
-            if (proxyData && proxyData.upcomingMatches) {
-                upcomingMatches = proxyData.upcomingMatches.map(m => ({
-                    home: normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || ''),
-                    away: normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || ''),
-                    utcDate: m.utcDate
-                }));
-                nextMatch = upcomingMatches[0] || null;
-            } else if (proxyData && proxyData.nextMatch) {
-                const m = proxyData.nextMatch;
-                nextMatch = {
-                    home: normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || ''),
-                    away: normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || ''),
-                    utcDate: m.utcDate
-                };
-                upcomingMatches = [nextMatch];
-            }
-        }
-    } catch (e) {
-        console.warn('[Live] Falha ao obter upcomingMatches do proxy:', e.message);
-    }
 
-    // Tenta Camada 1
+    // ── CAMADA 1: worldcup26.ir ──────────────────────────────────
+    // Tentamos primeiro — sem consumir cota do proxy.
     const layer1 = await fetchFromWorldCup26();
     if (layer1) {
-        const total = Object.keys(layer1.data).length + Object.keys(layer1.liveScores).length;
         console.info(`[Live] ✅ ${layer1.source}: ${Object.keys(layer1.data).length} encerradas, ${Object.keys(layer1.liveScores).length} ao vivo`);
+        // Busca upcomingMatches do proxy em paralelo (não bloqueia se falhar)
+        try {
+            const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
+            const proxyRes = await fetch(`${proxyUrl}/wc2026/live`, { signal: AbortSignal.timeout(4000) });
+            if (proxyRes.ok) {
+                const proxyData = await proxyRes.json();
+                upcomingMatches = _parseUpcomingMatches(proxyData);
+                nextMatch = upcomingMatches[0] || null;
+            }
+        } catch (e) {
+            console.warn('[Live] upcomingMatches indisponível (proxy):', e.message);
+        }
         layer1.nextMatch = nextMatch;
         layer1.upcomingMatches = upcomingMatches;
         return layer1;
     }
 
-    // Tenta Camada 2 (proxy local)
-    const layer2 = await fetchFromProxy();
-    if (layer2) {
-        const total = Object.keys(layer2.data).length + Object.keys(layer2.liveScores).length;
-        console.info(`[Live] ⚠️ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
-        layer2.nextMatch = nextMatch;
-        layer2.upcomingMatches = upcomingMatches;
-        return layer2;
+    // ── CAMADA 2: proxy football-data.org ────────────────────────
+    // Uma única chamada — resultado usado para dados E upcomingMatches.
+    console.warn('[Live] worldcup26.ir indisponível — tentando proxy football-data.org');
+    let rawProxyData = null;
+    try {
+        const proxyUrl = typeof PROXY_URL !== 'undefined' ? PROXY_URL : 'http://localhost:3002';
+        const proxyRes = await fetch(`${proxyUrl}/wc2026/live`, { signal: AbortSignal.timeout(6000) });
+        if (proxyRes.ok) rawProxyData = await proxyRes.json();
+    } catch (e) {
+        console.warn('[Live] Proxy football-data.org falhou:', e.message);
     }
 
-    const fallbackLive = {
-        "Brazil vs Haiti": {
-            homeScore: 3,
-            awayScore: 0,
-            minute: "50:15",
-            homeScorers: ["Matheus Cunha 23', 36'", "Vinícius Júnior 45+3'"],
-            awayScorers: [],
-            status: "in_play",
-            source: "offline_cache"
+    if (rawProxyData) {
+        upcomingMatches = _parseUpcomingMatches(rawProxyData);
+        nextMatch = upcomingMatches[0] || null;
+
+        // Processa os dados do proxy como Camada 2
+        const layer2 = _buildResultsFromProxy(rawProxyData);
+        if (layer2) {
+            console.info(`[Live] ⚠️ ${layer2.source}: ${Object.keys(layer2.data).length} encerradas, ${Object.keys(layer2.liveScores).length} ao vivo`);
+            layer2.nextMatch = nextMatch;
+            layer2.upcomingMatches = upcomingMatches;
+            return layer2;
         }
+    }
+
+    // ── CAMADA 3: Fallback estático ───────────────────────────────
+    console.warn('[Live] Todas as fontes falharam — usando fallback estático');
+    return {
+        mode: 'simulation',
+        source: 'offline_cache',
+        data: FALLBACK_RESULTS,
+        liveScores: {},
+        hasLive: false,
+        nextMatch,
+        upcomingMatches
     };
-    return { mode: 'simulation', source: 'offline_cache', data: FALLBACK_RESULTS, liveScores: fallbackLive, hasLive: true, nextMatch, upcomingMatches };
+}
+
+// ── Helpers internos ──────────────────────────────────────────
+function _parseUpcomingMatches(proxyData) {
+    if (!proxyData) return [];
+    if (proxyData.upcomingMatches?.length > 0) {
+        return proxyData.upcomingMatches.map(m => ({
+            home: normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || ''),
+            away: normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || ''),
+            utcDate: m.utcDate
+        })).filter(m => m.home && m.away);
+    }
+    if (proxyData.nextMatch) {
+        const m = proxyData.nextMatch;
+        const next = {
+            home: normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || ''),
+            away: normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || ''),
+            utcDate: m.utcDate
+        };
+        return (next.home && next.away) ? [next] : [];
+    }
+    return [];
+}
+
+function _buildResultsFromProxy(data) {
+    const results = {};
+    const liveScores = {};
+
+    (data.finished || []).forEach(m => {
+        const home = normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || '');
+        const away = normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || '');
+        const homeScore = m.score?.fullTime?.home ?? -1;
+        const awayScore = m.score?.fullTime?.away ?? -1;
+        if (!home || !away || homeScore < 0) return;
+        const winner = homeScore > awayScore ? home : awayScore > homeScore ? away : null;
+        results[`${home} vs ${away}`] = { winner, homeScore, awayScore, source: 'football-data.org', status: 'finished' };
+    });
+
+    (data.inPlay || []).forEach(m => {
+        const home = normalizeName(m.homeTeam?.name || m.homeTeam?.shortName || '');
+        const away = normalizeName(m.awayTeam?.name || m.awayTeam?.shortName || '');
+        const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0;
+        const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0;
+        const minute    = m.minute || null;
+        if (!home || !away) return;
+        liveScores[`${home} vs ${away}`] = { homeScore, awayScore, minute, status: 'in_play', source: 'football-data.org' };
+    });
+
+    const hasData = Object.keys(results).length > 0 || Object.keys(liveScores).length > 0;
+    if (!hasData) return null;
+
+    return {
+        mode: 'live',
+        source: 'football-data.org',
+        data: results,
+        liveScores,
+        hasLive: data.hasLive || Object.keys(liveScores).length > 0,
+        nextMatch: null // será preenchido por getDataSource()
+    };
 }
 
 // ── STATUS PÚBLICO ───────────────────────────────────────────────
