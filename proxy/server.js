@@ -185,17 +185,9 @@ function sendPushToAll(title, body) {
     });
 }
 
-// Background polling loop (runs every 10 seconds to guarantee ultra-fast push alerts without hitting the 10 req/min rate limit)
-setInterval(async () => {
-    if (subscriptions.length === 0) return;
-    try {
-        const data = await fetchFootballData('/competitions/WC/matches');
-        const matches = data?.matches || [];
-        detectAndSendGoalPush(matches);
-    } catch(e) {
-        console.warn('[Proxy Push Polling] Erro background:', e.message);
-    }
-}, 10000);
+// A checagem de push background via setInterval foi removida pois ambientes Serverless (Vercel) 
+// não suportam loops persistentes e causam burst de requisições, estourando o limite da API.
+// O push notification será disparado pelo endpoint /live sob demanda.
 
 // ── Endpoints de Push ──────────────────────────────────────────
 app.get('/api/notifications/vapidPublicKey', (req, res) => {
@@ -265,6 +257,9 @@ app.get('/wc2026/live', async (req, res) => {
             fetchedAt:       new Date().toISOString(),
             fromCache:       false
         };
+
+        // Dispara verificação de gols para Push Notifications
+        detectAndSendGoalPush(inPlay);
 
         // Cache em memória: 30s com jogo ao vivo, 60s sem jogo
         const ttl = inPlay.length > 0 ? 30_000 : 60_000;
