@@ -17,6 +17,66 @@ const NEXT_MATCH = {
     time: 'Hoje, 14:00'
 };
 
+// Sobrescrita elegante do alert nativo com modal glassmorphic premium
+window.alert = function(message) {
+    const existing = document.getElementById('custom-alert-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'custom-alert-modal';
+    modal.className = 'custom-alert-overlay';
+
+    const formattedMsg = message.replace(/\n/g, '<br>');
+
+    let title = '⚽ Bolão Copa 2026';
+    let icon = '🔔';
+    if (message.includes('iPhone') || message.includes('Apple')) {
+        title = 'Atenção usuário de iPhone';
+        icon = '📱';
+    } else if (message.includes('negada') || message.includes('configurações')) {
+        title = 'Permissão Necessária';
+        icon = '⚠️';
+    } else if (message.includes('pronto') || message.includes('receberá')) {
+        title = 'Alertas Ativos';
+        icon = '🟢';
+    } else if (message.includes('conectar') || message.includes('servidor')) {
+        title = 'Erro de Conexão';
+        icon = '❌';
+    }
+
+    modal.innerHTML = `
+        <div class="custom-alert-box">
+            <div class="custom-alert-header">
+                <span class="custom-alert-icon">${icon}</span>
+                <h3>${title}</h3>
+            </div>
+            <div class="custom-alert-body">
+                <p>${formattedMsg}</p>
+            </div>
+            <div class="custom-alert-footer">
+                <button class="custom-alert-btn" id="custom-alert-close-btn">OK</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeBtn = modal.querySelector('#custom-alert-close-btn');
+    if (closeBtn) closeBtn.focus();
+    
+    const closeModal = () => {
+        modal.classList.add('fade-out');
+        setTimeout(() => {
+            if (modal.parentNode) modal.remove();
+        }, 300);
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+};
+
 let cachedData = null;
 let _pollingTimer = null;
 let _countdownTimer = null;
@@ -466,6 +526,10 @@ function renderGroupsOnlyView(groups, finished, total) {
         title.textContent = group.name.replace(/^Group\s+/, `${t('group')} `);
         card.appendChild(title);
 
+        // Wrapper responsivo para evitar perda de dados no mobile
+        const tableResponsive = document.createElement('div');
+        tableResponsive.className = 'table-responsive';
+
         // Cabeçalho da tabela
         const header = document.createElement('div');
         header.className = 'group-table-header';
@@ -480,7 +544,7 @@ function renderGroupsOnlyView(groups, finished, total) {
             <span class="col-stat">SG</span>
             <span class="col-stat col-pts">${t('pts')}</span>
         `;
-        card.appendChild(header);
+        tableResponsive.appendChild(header);
 
         group.standings.forEach((team, idx) => {
             const row = document.createElement('div');
@@ -518,9 +582,10 @@ function renderGroupsOnlyView(groups, finished, total) {
             row.appendChild(ga);
             row.appendChild(gd);
             row.appendChild(pts);
-            card.appendChild(row);
+            tableResponsive.appendChild(row);
         });
 
+        card.appendChild(tableResponsive);
         container.appendChild(card);
     });
 }
@@ -866,6 +931,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Teste automático de gol após 10 segundos (para testar em segundo plano)
+    setTimeout(() => {
+        console.info('[Teste] Disparando gol teste (Espanha 1 x 0 Portugal) após delay...');
+        if (window.triggerGoalAnimation) {
+            window.triggerGoalAnimation('Espanha', 'Espanha', 'Portugal', 0, 0, 1, 0);
+        }
+    }, 10000);
 });
 
 window._previousScores = {};
@@ -902,9 +975,38 @@ window.triggerGoalAnimation = function(scoringTeam, homeName, awayName, prevHome
         if (prevAway !== newAway) overlay.querySelector('.away-number').classList.add('flip');
     }, 1500);
 
-    const audio = new Audio('https://www.myinstants.com/media/sounds/gol_1.mp3');
+    const audio = new Audio('sounds/gol.mp3');
     audio.volume = 0.9;
     audio.play().catch(e => console.warn('Audio blocked:', e));
+
+    // Notificação do Sistema (Garante som/alerta quando a aba estiver minimizada)
+    if (Notification.permission === 'granted') {
+        const title = `⚽ GOL DA ${tTeam(scoringTeam).toUpperCase()}!`;
+        const options = {
+            body: `${tTeam(homeName)} ${newHome} × ${newAway} ${tTeam(awayName)}`,
+            icon: 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg',
+            badge: 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg',
+            tag: `goal-${homeName}-${awayName}-${newHome}-${newAway}`,
+            renotify: true,
+            silent: false
+        };
+
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(title, options).catch(err => {
+                    console.warn('Erro via SW, tentando construtor padrão:', err);
+                    new Notification(title, options);
+                });
+            });
+        } else {
+            try {
+                new Notification(title, options);
+            } catch (e) {
+                console.warn('Erro ao instanciar Notification:', e);
+            }
+        }
+    }
+
 
     if (typeof confetti === 'function') {
         confetti({
@@ -1026,14 +1128,23 @@ function renderLiveMatches(liveScores, groups) {
 
 // ── PUSH NOTIFICATIONS (SERVICE WORKER) ──────────────────────────
 async function setupPushNotifications() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!('serviceWorker' in navigator)) return;
+
+    let registration;
+    try {
+        registration = await navigator.serviceWorker.register('sw.js');
+        console.log('[Service Worker] Registrado com sucesso.');
+    } catch (e) {
+        console.error('[Service Worker] Falha ao registrar:', e);
+        return;
+    }
+
+    if (!('PushManager' in window)) return;
 
     const btn = document.getElementById('btn-subscribe');
     if (!btn) return;
 
     try {
-        const registration = await navigator.serviceWorker.register('sw.js');
-        
         let sub = await registration.pushManager.getSubscription();
         if (sub) {
             btn.textContent = '🔔 Alertas Ativos';
