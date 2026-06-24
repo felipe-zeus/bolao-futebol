@@ -240,11 +240,7 @@ app.get('/wc2026/live', async (req, res) => {
         const data    = await fetchFootballData('/competitions/WC/matches');
         const matches = data?.matches || [];
 
-        const finished = matches.filter(m => m.status === 'FINISHED');
-        const inPlay   = matches.filter(m => ['IN_PLAY', 'PAUSED', 'HALF_TIME'].includes(m.status));
-        const upcoming = matches.filter(m => ['TIMED', 'SCHEDULED'].includes(m.status));
-
-        // ── SISTEMA ANTI-VAR (Overrides Manuais) ───────────────────
+        // ── SISTEMA ANTI-VAR (Overrides Manuais) — APLICADO ANTES DA FILTRAGEM ──
         try {
             const overridesPath = path.join(__dirname, 'overrides.json');
             if (fs.existsSync(overridesPath)) {
@@ -253,36 +249,36 @@ app.get('/wc2026/live', async (req, res) => {
                 const overrides = require('./overrides.json');
                 
                 if (overrides && overrides.matches) {
-                    const applyOverrides = (arr) => {
-                        arr.forEach(m => {
-                            const ov = overrides.matches[m.id];
-                            if (ov) {
-                                if (ov.home !== undefined) {
-                                    m.score = m.score || {};
-                                    m.score.fullTime = m.score.fullTime || {};
-                                    m.score.fullTime.home = ov.home;
-                                }
-                                if (ov.away !== undefined) {
-                                    m.score = m.score || {};
-                                    m.score.fullTime = m.score.fullTime || {};
-                                    m.score.fullTime.away = ov.away;
-                                }
-                                if (ov.status !== undefined) {
-                                    m.status = ov.status;
-                                }
-                                console.log(`[VAR Override] Jogo ${m.id} corrigido: ${m.homeTeam?.name} ${ov.home} x ${ov.away} ${m.awayTeam?.name}`);
+                    matches.forEach(m => {
+                        const ov = overrides.matches[m.id];
+                        if (ov) {
+                            if (ov.home !== undefined) {
+                                m.score = m.score || {};
+                                m.score.fullTime = m.score.fullTime || {};
+                                m.score.fullTime.home = ov.home;
                             }
-                        });
-                    };
-                    applyOverrides(finished);
-                    applyOverrides(inPlay);
-                    applyOverrides(upcoming);
+                            if (ov.away !== undefined) {
+                                m.score = m.score || {};
+                                m.score.fullTime = m.score.fullTime || {};
+                                m.score.fullTime.away = ov.away;
+                            }
+                            if (ov.status !== undefined) {
+                                m.status = ov.status;
+                            }
+                            console.log(`[VAR Override] Jogo ${m.id} corrigido: ${m.homeTeam?.name} ${ov.home} x ${ov.away} ${m.awayTeam?.name}`);
+                        }
+                    });
                 }
             }
         } catch(e) {
             console.error('[Proxy] Erro ao aplicar overrides de VAR:', e.message);
         }
         // ──────────────────────────────────────────────────────────────
+
+        // Filtra os arrays depois de ter aplicado todas as correções de VAR no objeto matches
+        const finished = matches.filter(m => m.status === 'FINISHED');
+        const inPlay   = matches.filter(m => ['IN_PLAY', 'PAUSED', 'HALF_TIME'].includes(m.status));
+        const upcoming = matches.filter(m => ['TIMED', 'SCHEDULED'].includes(m.status));
 
         const upcomingSorted = upcoming.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
         const nextMatch      = upcomingSorted[0] || null;

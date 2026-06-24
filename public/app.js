@@ -404,7 +404,11 @@ function renderChampion(champion, mode, realMatches = 0) {
     document.getElementById('champion-name').textContent = tTeam(champion);
 
     const rank = getFifaRank(champion);
-    const pts  = getFifaPoints(champion).toFixed(2);
+    
+    // Pega o Elo dinâmico do campeão atualizado após partidas encerradas
+    const dynPts = computeDynamicElo(window._liveResultsCache || {});
+    const pts = (dynPts[champion] ?? getFifaPoints(champion)).toFixed(2);
+
     document.getElementById('champion-rank-badge').textContent =
         `${t('rank')} #${rank} • ${pts} ${t('pts')}`;
 
@@ -592,28 +596,41 @@ function renderGroupsOnlyView(groups, finished, total) {
 
 function renderRankingTable() {
     const container = document.getElementById('ranking-table');
-    const entries = Object.entries(FIFA_RANKINGS)
-        .sort((a, b) => a[1].rank - b[1].rank)
-        .slice(0, 32);
+    
+    // Recalcula o Elo dinâmico a partir dos resultados integrados
+    const dynPts = computeDynamicElo(window._liveResultsCache || {});
+    
+    // Mapeia e atualiza os pontos de cada time
+    const entries = Object.entries(FIFA_RANKINGS).map(([teamEn, info]) => {
+        return {
+            name: teamEn,
+            points: dynPts[teamEn] ?? info.points,
+            initialRank: info.rank
+        };
+    });
+
+    // Ordena decrescente pelos pontos atualizados (Elo Dinâmico)
+    entries.sort((a, b) => b.points - a.points);
 
     const grid = document.createElement('div');
     grid.className = 'ranking-grid';
 
-    entries.forEach(([teamEn, info]) => {
+    entries.slice(0, 32).forEach((teamData, idx) => {
+        const currentRank = idx + 1;
         const row = document.createElement('div');
         row.className = 'ranking-row';
 
         const pos = document.createElement('div');
-        pos.className = 'ranking-pos' + (info.rank <= 3 ? ' top3' : '');
-        pos.textContent = info.rank;
+        pos.className = 'ranking-pos' + (currentRank <= 3 ? ' top3' : '');
+        pos.textContent = currentRank;
 
         const name = document.createElement('div');
         name.className = 'ranking-team';
-        name.textContent = tTeam(teamEn); // nome traduzido
+        name.textContent = tTeam(teamData.name); // nome traduzido
 
         const pts = document.createElement('div');
         pts.className = 'ranking-pts';
-        pts.textContent = `${info.points.toFixed(2)} ${t('pts')}`;
+        pts.textContent = `${teamData.points.toFixed(2)} ${t('pts')}`;
 
         row.appendChild(pos);
         row.appendChild(name);
@@ -706,7 +723,6 @@ function renderNextMatchPreview() {
     let displayTime = matchData.time || 'A definir';
     if (matchData.utcDate) {
         const d = new Date(matchData.utcDate);
-        d.setHours(d.getHours() + 2);
         displayTime = d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ' às');
     }
 

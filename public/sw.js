@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
     '/live.js',
     '/engine.js',
     '/config.js',
+    '/sounds/gol.mp3',
     'https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg'
 ];
 
