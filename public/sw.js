@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bolao26-v1';
+const CACHE_NAME = 'bolao26-v2';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
