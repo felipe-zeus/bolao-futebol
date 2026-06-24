@@ -10,9 +10,9 @@ echo.
 REM Navega para a pasta do projeto
 cd /d "%~dp0"
 
-REM Carrega as variaveis do arquivo .env
-for /f "tokens=1,2 delims==" %%A in (.env) do (
-    if not "%%A"=="" if not "%%A:~0,1%"=="#" set "%%A=%%B"
+REM Carrega as variaveis do arquivo .env de forma segura
+for /f "eol=# tokens=1* delims==" %%A in (.env) do (
+    set "%%A=%%B"
 )
 
 echo  [1/3] Variaveis de ambiente carregadas do .env
