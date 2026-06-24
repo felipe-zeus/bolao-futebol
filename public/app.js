@@ -948,13 +948,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Teste automático de gol após 10 segundos (para testar em segundo plano)
+    // Teste automático de gol após 1.5 segundos (para testar de forma imediata ao carregar/recarregar a página)
     setTimeout(() => {
-        console.info('[Teste] Disparando gol teste (Espanha 1 x 0 Portugal) após delay...');
+        console.info('[Teste] Disparando gol teste (Espanha 1 x 0 Portugal) de forma rápida ao carregar a página...');
         if (window.triggerGoalAnimation) {
             window.triggerGoalAnimation('Espanha', 'Espanha', 'Portugal', 0, 0, 1, 0);
         }
-    }, 10000);
+    }, 1500);
 });
 
 window._previousScores = {};
