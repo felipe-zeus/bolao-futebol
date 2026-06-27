@@ -185,9 +185,98 @@ function sendPushToAll(title, body) {
     });
 }
 
-// A checagem de push background via setInterval foi removida pois ambientes Serverless (Vercel) 
-// não suportam loops persistentes e causam burst de requisições, estourando o limite da API.
-// O push notification será disparado pelo endpoint /live sob demanda.
+// ── SCHEDULER DE SEGUNDO PLANO PARA ATUALIZAÇÕES E PUSH NOTIFICATIONS ──
+// Mantém o cache atualizado e dispara notificações mesmo com a página fechada.
+let schedulerTimeout = null;
+
+async function runScheduledCheck() {
+    try {
+        console.log('[Scheduler] Executando checagem de jogos em segundo plano...');
+        if (!API_KEY) {
+            console.warn('[Scheduler] FOOTBALL_DATA_KEY não configurada. Abortando checagem.');
+            return;
+        }
+
+        const data = await fetchFootballData('/competitions/WC/matches');
+        const matches = data?.matches || [];
+
+        // Aplicar Overrides de VAR
+        try {
+            const overridesPath = path.join(__dirname, 'overrides.json');
+            if (fs.existsSync(overridesPath)) {
+                delete require.cache[require.resolve('./overrides.json')];
+                const overrides = require('./overrides.json');
+                if (overrides && overrides.matches) {
+                    matches.forEach(m => {
+                        const ov = overrides.matches[m.id];
+                        if (ov) {
+                            if (ov.home !== undefined) {
+                                m.score = m.score || {};
+                                m.score.fullTime = m.score.fullTime || {};
+                                m.score.fullTime.home = ov.home;
+                            }
+                            if (ov.away !== undefined) {
+                                m.score = m.score || {};
+                                m.score.fullTime = m.score.fullTime || {};
+                                m.score.fullTime.away = ov.away;
+                            }
+                            if (ov.status !== undefined) {
+                                m.status = ov.status;
+                            }
+                        }
+                    });
+                }
+            }
+        } catch(e) {
+            console.error('[Scheduler] Erro ao aplicar overrides:', e.message);
+        }
+
+        const finished = matches.filter(m => m.status === 'FINISHED');
+        const inPlay   = matches.filter(m => ['IN_PLAY', 'PAUSED', 'HALF_TIME'].includes(m.status));
+        const upcoming = matches.filter(m => ['TIMED', 'SCHEDULED'].includes(m.status));
+        const upcomingSorted = upcoming.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+        const nextMatch      = upcomingSorted[0] || null;
+
+        const responseData = {
+            finished,
+            inPlay,
+            nextMatch,
+            upcomingMatches: upcomingSorted,
+            totalFinished:   finished.length,
+            hasLive:         inPlay.length > 0,
+            fetchedAt:       new Date().toISOString(),
+            fromCache:       false
+        };
+
+        // Atualiza os caches em memória
+        setCache('wc2026_live', responseData, inPlay.length > 0 ? 30_000 : 60_000);
+        setCache('wc2026_matches', data, 30_000);
+
+        // Persiste em disco
+        persistCache(responseData);
+
+        // Dispara verificação de gols para Push Notifications
+        detectAndSendGoalPush(inPlay);
+
+        // Define intervalo: 30 segundos se houver jogo ao vivo, caso contrário 60 segundos
+        const nextDelay = inPlay.length > 0 ? 30000 : 60000;
+        schedulerTimeout = setTimeout(runScheduledCheck, nextDelay);
+
+    } catch (err) {
+        console.error('[Scheduler] Erro na checagem em segundo plano:', err.message);
+        // Tenta novamente em 60 segundos em caso de falha de rede/API
+        schedulerTimeout = setTimeout(runScheduledCheck, 60000);
+    }
+}
+
+function startBackgroundScheduler() {
+    if (process.env.VERCEL) {
+        console.log('[Scheduler] Executando em ambiente serverless do Vercel. Scheduler em segundo plano desativado.');
+        return;
+    }
+    console.log('[Scheduler] Ativando checagem periódica em segundo plano.');
+    runScheduledCheck();
+}
 
 // ── Endpoints de Push ──────────────────────────────────────────
 app.get('/api/notifications/vapidPublicKey', (req, res) => {
@@ -365,5 +454,7 @@ app.listen(PORT, '0.0.0.0', () => {
         console.warn('   Obtenha sua chave gratuita em: https://www.football-data.org/client/register\n');
     } else {
         console.log('\n✅ API Key configurada. Cache de 30s ativo. Proxy pronto para uso.\n');
+        // Inicia o scheduler automático de segundo plano
+        startBackgroundScheduler();
     }
 });
