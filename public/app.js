@@ -308,6 +308,7 @@ function runHybridSimulation(liveResults) {
         standings.sort((a, b) =>
             b.pts - a.pts ||
             (b.gf - b.ga) - (a.gf - a.ga) ||
+            b.gf - a.gf ||
             b.fifaPoints - a.fifaPoints
         );
         groupResults[groupName] = standings;
@@ -323,7 +324,12 @@ function runHybridSimulation(liveResults) {
         groupRunnersUp[g] = standings[1];
         thirdPlace.push({ ...standings[2], group: g });
     }
-    thirdPlace.sort((a, b) => b.pts - a.pts || b.fifaPoints - a.fifaPoints);
+    thirdPlace.sort((a, b) =>
+        b.pts - a.pts ||
+        (b.gf - b.ga) - (a.gf - a.ga) ||
+        b.gf - a.gf ||
+        b.fifaPoints - a.fifaPoints
+    );
     const best8Third = thirdPlace.slice(0, 8);
 
     // Round of 32 — 16 partidas
@@ -948,13 +954,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Teste automático de gol após 1.5 segundos (para testar de forma imediata ao carregar/recarregar a página)
-    setTimeout(() => {
-        console.info('[Teste] Disparando gol teste (Espanha 1 x 0 Portugal) de forma rápida ao carregar a página...');
-        if (window.triggerGoalAnimation) {
-            window.triggerGoalAnimation('Espanha', 'Espanha', 'Portugal', 0, 0, 1, 0);
-        }
-    }, 1500);
+
 });
 
 window._previousScores = {};

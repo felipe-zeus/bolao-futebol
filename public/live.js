@@ -43,6 +43,7 @@ const TEAM_NAME_MAP = {
     'Curacao':                    'Curaçao',
     'Cape Verde':                 'Cape Verde',
     'Cabo Verde':                 'Cape Verde',
+    'Cape Verde Islands':         'Cape Verde',
     // Novos times Copa 2026
     'Turkey':                     'Turkey',
     'Türkiye':                     'Turkey',

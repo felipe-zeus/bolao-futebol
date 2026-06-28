@@ -395,6 +395,7 @@ function buildGroupsOnlyView(liveResults, liveScores = {}) {
         standings.sort((a, b) =>
             b.pts - a.pts ||
             (b.gf - b.ga) - (a.gf - a.ga) ||
+            b.gf - a.gf ||
             b.fifaPoints - a.fifaPoints
         );
         groupResults[groupName] = standings;
