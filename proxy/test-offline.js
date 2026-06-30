@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer');
     const page = await browser.newPage();
     
     // First, visit online to install Service Worker and cache resources
-    await page.goto('https://bolao-futebol.vercel.app/', {waitUntil: 'networkidle0'});
+    await page.goto('http://localhost:3001/', {waitUntil: 'networkidle0'});
     
     console.log('Online visit complete. Waiting 3s for SW cache to populate...');
     await new Promise(r => setTimeout(r, 3000));
