@@ -103,10 +103,21 @@ let _groupStageWasComplete = false;
 //   4. O snapshot é usado como base fixa para toda a simulação do mata-mata
 //
 const _SKEY = {
-    results:  'bolao2026_v1_results',  // resultados processados da fase de grupos
-    eloSnap:  'bolao2026_v1_elo',      // snapshot Elo pós-fase de grupos (imutável)
-    meta:     'bolao2026_v1_meta'      // metadados: savedAt, finishedCount
+    results:  'bolao2026_v2_results',  // v2: reset para 2ª fase (chaveamento correto)
+    eloSnap:  'bolao2026_v2_elo',      // snapshot Elo atualizável durante o mata-mata
+    meta:     'bolao2026_v2_meta'      // metadados: savedAt, finishedCount
 };
+
+// ── MIGRAÇÃO: Limpa chaves legadas v1 (reset forçado para 2ª fase) ─────────────────
+// Garante que o localStorage antigo não interfira com o chaveamento correto.
+try {
+    ['bolao2026_v1_results', 'bolao2026_v1_elo', 'bolao2026_v1_meta'].forEach(k => {
+        if (localStorage.getItem(k)) {
+            localStorage.removeItem(k);
+            console.info(`[Storage] 🧹 Chave legada ${k} removida (migração v1→v2).`);
+        }
+    });
+} catch(e) {}
 
 function _saveResultsToStorage(results) {
     if (!results || Object.keys(results).length === 0) return;
@@ -153,14 +164,15 @@ function _mergeWithStoredResults(liveResults) {
 // Snapshot imutável do Elo dinâmico após encerramento da fase de grupos.
 // Salvo UMA Única vez — serve como base fixa para o mata-mata inteiro.
 function _saveEloSnapshot(dynPts) {
-    if (localStorage.getItem(_SKEY.eloSnap)) return; // já existe — não sobrescreve
+    // Atualiza a cada novo resultado real para manter Elo preciso durante o mata-mata
+    // (não mais imutável desde a 2ª fase — localStorage v2)
     try {
         localStorage.setItem(_SKEY.eloSnap, JSON.stringify({
             pts: dynPts,
             savedAt: new Date().toISOString(),
-            locked: true
+            locked: false
         }));
-        console.info('🔒 [Storage] Snapshot Elo pós-fase de grupos salvo permanentemente no localStorage.');
+        console.info('📊 [Storage] Snapshot Elo atualizado.');
     } catch (e) { console.warn('[Storage] Falha ao salvar snapshot Elo:', e.message); }
 }
 
@@ -236,24 +248,20 @@ function setStatus(mode, sourceLabel = '', hasLive = false) {
 }
 
 // ── MOTOR HÍBRIDO: Integra resultados reais + simula o resto ──
-// Etapas:
-//   1. Computa Elo dinâmico (pontos atualizados após resultados reais)
-//   2. Aplica resultados reais fixos na fase de grupos
-//   3. Simula jogos ainda não realizados de forma DETERMINÍSTICA
-//      → quem tem maior probabilidade (Elo atualizado) SEMPRE vence
-//   4. Monta o chaveamento do mata-mata com a mesma lógica
-function runHybridSimulation(liveResults) {
-    const hasLive = liveResults && Object.keys(liveResults).length > 0;
+function runHybridSimulation(liveResults, knockoutResults = {}) {
+    const hasLive = (liveResults && Object.keys(liveResults).length > 0) ||
+                    (knockoutResults && Object.keys(knockoutResults).length > 0);
 
-    // ── PASSO 1: Elo dinâmico ─────────────────────────────────
-    // Recalcula pontos de todas as seleções considerando resultados reais
-    const dynPts = computeDynamicElo(liveResults);
+    // ── PASSO 1: Elo dinâmico ───────────────────────────────────────────────────
+    // Inclui resultados do mata-mata para Elo preciso durante o torneio inteiro
+    const allRealResults = { ...(liveResults || {}), ...(knockoutResults || {}) };
+    const dynPts = computeDynamicElo(allRealResults);
 
-    // Helper determinístico local
+    // Helper determinístico — prioridade: mata-mata real > simulação Elo
     function resolveMatch(teamA, teamB) {
-        const real = liveResults?.[`${teamA} vs ${teamB}`]
-                  || liveResults?.[`${teamB} vs ${teamA}`];
-        if (real?.winner) return real.winner;
+        const kr = knockoutResults || {};
+        const knockoutReal = kr[`${teamA} vs ${teamB}`] || kr[`${teamB} vs ${teamA}`];
+        if (knockoutReal?.winner) return knockoutReal.winner;
         // Determinístico: maior probabilidade Elo sempre vence
         return simulateMatchDeterministic(teamA, teamB, dynPts);
     }
@@ -314,37 +322,14 @@ function runHybridSimulation(liveResults) {
         groupResults[groupName] = standings;
     }
 
-    // ── PASSO 3: Mata-Mata ────────────────────────────────────
-    const groupLetters = Object.keys(WORLD_CUP_2026_GROUPS);
-    const groupWinners = {}, groupRunnersUp = {};
-    const thirdPlace = [];
-
-    for (const [g, standings] of Object.entries(groupResults)) {
-        groupWinners[g]   = standings[0];
-        groupRunnersUp[g] = standings[1];
-        thirdPlace.push({ ...standings[2], group: g });
-    }
-    thirdPlace.sort((a, b) =>
-        b.pts - a.pts ||
-        (b.gf - b.ga) - (a.gf - a.ga) ||
-        b.gf - a.gf ||
-        b.fifaPoints - a.fifaPoints
-    );
-    const best8Third = thirdPlace.slice(0, 8);
-
-    // Round of 32 — 16 partidas
+    // ── PASSO 3: Mata-Mata — Chaveamento Oficial FIFA Copa 2026 ────────────────
+    // Usa o bracket REAL definido pela FIFA após a fase de grupos (OFFICIAL_R32_BRACKET).
+    // NÃO é gerado matematicamente — resultados reais já disputados são aplicados
+    // automaticamente por resolveMatch() via knockoutResults.
     const r32Matches = [], r32Winners = [];
-    for (let i = 0; i < 12; i++) {
-        const w  = groupWinners[groupLetters[i]].name;
-        const ru = groupRunnersUp[groupLetters[11 - i]].name;
-        r32Matches.push(`${w} vs ${ru}`);
-        r32Winners.push(resolveMatch(w, ru));
-    }
-    for (let i = 0; i < 4; i++) {
-        const a = best8Third[i]?.name     || groupRunnersUp[groupLetters[i]].name;
-        const b = best8Third[i + 4]?.name || groupRunnersUp[groupLetters[i + 6]].name;
-        r32Matches.push(`${a} vs ${b}`);
-        r32Winners.push(resolveMatch(a, b));
+    for (const matchup of OFFICIAL_R32_BRACKET) {
+        r32Matches.push(`${matchup.home} vs ${matchup.away}`);
+        r32Winners.push(resolveMatch(matchup.home, matchup.away));
     }
 
     // Round of 16
@@ -380,7 +365,7 @@ function runHybridSimulation(liveResults) {
         generatedAt: new Date().toISOString(),
         source: hasLive ? 'live' : 'simulation',
         fifaRankingDate: 'Dynamic (post-results Elo)',
-        realMatchesUsed: hasLive ? Object.keys(liveResults).length : 0,
+        realMatchesUsed: Object.keys(liveResults || {}).length + Object.keys(knockoutResults || {}).length,
         groups: Object.entries(groupResults).map(([name, standings]) => ({
             name: `Group ${name}`,
             standings: standings.map(s => ({
@@ -782,11 +767,12 @@ async function refresh() {
     try {
         const liveSource = await getDataSource();
 
-        window._liveResultsCache = liveSource.data       || null;
-        window._liveScoresCache  = liveSource.liveScores || null;
-        window._nextMatchCache   = liveSource.nextMatch  || null;
+        window._liveResultsCache = liveSource.data        || null;
+        window._liveScoresCache  = liveSource.liveScores  || null;
+        window._nextMatchCache   = liveSource.nextMatch   || null;
         window._upcomingMatchesCache = liveSource.upcomingMatches || [];
         window._hasScraperError  = liveSource.hasScraperError || false;
+        window._knockoutResultsCache = liveSource.knockoutData || {}; // LAST_32 em diante
 
         // ── PERSISTÊNCIA: salva e mescla com resultados históricos ────────
         if (window._liveResultsCache && Object.keys(window._liveResultsCache).length > 0) {
@@ -812,11 +798,12 @@ async function refresh() {
                 console.info(`[App] 🔄 Nova simulação completa (${finishedCount} jogos, grupos encerrados)`);
                 _lastFinishedCount = finishedCount;
 
-                // Salva snapshot Elo pós-grupos
-                const dynPts = computeDynamicElo(window._liveResultsCache);
+                // Salva snapshot Elo — inclui resultados do mata-mata para precisão máxima
+                const _allResults = { ...(window._liveResultsCache || {}), ...(window._knockoutResultsCache || {}) };
+                const dynPts = computeDynamicElo(_allResults);
                 _saveEloSnapshot(dynPts);
 
-                _cachedSimulation  = runHybridSimulation(window._liveResultsCache);
+                _cachedSimulation  = runHybridSimulation(window._liveResultsCache, window._knockoutResultsCache);
                 _cachedSimulation.groupStageComplete = true;
             } else {
                 console.info(`[App] ✅ Simulação estável (${finishedCount} jogos, sem novidades)`);

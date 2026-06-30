@@ -77,6 +77,32 @@ const WORLD_CUP_2026_GROUPS = {
     "L": ["England", "Croatia", "Ghana", "Panama"],
 };
 
+// ==============================================================
+// CHAVEAMENTO OFICIAL FIFA — 16-avos de Final (Round of 32)
+// Fonte: FIFA.com / football-data.org (IDs confirmados no games.json)
+// Fase disputada: 28 de Junho – 3 de Julho de 2026
+// CRÍTICO: Este é o bracket REAL definido pela FIFA após a fase de grupos.
+//          NÃO é gerado matematicamente — é o chaveamento oficial fixo.
+// ==============================================================
+const OFFICIAL_R32_BRACKET = [
+    { home: "South Africa",          away: "Canada" },                  // ID 537417 — 28/jun ✅ 0-1
+    { home: "Brazil",                away: "Japan" },                   // ID 537423 — 29/jun ✅ 2-1
+    { home: "Germany",               away: "Paraguay" },                // ID 537415 — 29/jun ✅ 1-1 (PEN: PAR)
+    { home: "Netherlands",           away: "Morocco" },                 // ID 537418 — 29/jun
+    { home: "Ivory Coast",           away: "Norway" },                  // ID 537424 — 30/jun
+    { home: "France",                away: "Sweden" },                  // ID 537416 — 30/jun
+    { home: "Mexico",                away: "Ecuador" },                 // ID 537425 — 01/jul
+    { home: "England",               away: "DR Congo" },                // ID 537426 — 01/jul
+    { home: "Belgium",               away: "Senegal" },                 // ID 537422 — 01/jul
+    { home: "United States",         away: "Bosnia and Herzegovina" },  // ID 537421 — 02/jul
+    { home: "Spain",                 away: "Austria" },                 // ID 537420 — 02/jul
+    { home: "Portugal",              away: "Croatia" },                 // ID 537419 — 02/jul
+    { home: "Switzerland",           away: "Algeria" },                 // ID 537429 — 03/jul
+    { home: "Australia",             away: "Egypt" },                   // ID 537428 — 03/jul
+    { home: "Argentina",             away: "Cape Verde" },              // ID 537427 — 03/jul
+    { home: "Colombia",              away: "Ghana" },                   // ID 537430 — 03/jul
+];
+
 // Pontuação FIFA base (snapshot Abril 2026)
 function getFifaPoints(teamName) {
     const entry = FIFA_RANKINGS[teamName];
@@ -117,9 +143,6 @@ function computeDynamicElo(realResults) {
 
     if (!realResults) return dynPts;
 
-    const K = 50; // Copa do Mundo: Fase de Grupos e Oitavas (I=50 conforme FIFA oficial)
-                  // Quartas em diante usam I=60 — aplicado na simulação do mata-mata real
-
     for (const [matchKey, result] of Object.entries(realResults)) {
         if (result.homeScore < 0 || result.awayScore < 0) continue;
 
@@ -133,11 +156,32 @@ function computeDynamicElo(realResults) {
         const We_home = 1 / (1 + Math.pow(10, (ptsAway - ptsHome) / 600));
         const We_away = 1 - We_home;
 
-        // Resultado real
+        // Fator de Importância (I) oficial FIFA por fase:
+        //   I = 50  → Fase de Grupos + 16-avos + Oitavas de Final
+        //   I = 60  → Quartas de Final em diante
+        const stage = (result.stage || '').toUpperCase();
+        const isHighStake = ['QUARTER', 'SEMI', 'FINAL'].some(s => stage.includes(s));
+        const K = isHighStake ? 60 : 50;
+
+        // Resultado real — respeita vencedor por pênaltis (W=0.75 conforme regra FIFA oficial)
+        // Se `result.winner` está definido, usa ele (cobre pênaltis e tempo extra)
+        // Fallback: compara placar do tempo normal
         let W_home, W_away;
-        if (result.homeScore > result.awayScore)      { W_home = 1;   W_away = 0;   }
-        else if (result.homeScore < result.awayScore) { W_home = 0;   W_away = 1;   }
-        else                                           { W_home = 0.5; W_away = 0.5; }
+        if (result.winner === home) {
+            const isPen = result.duration === 'PENALTY_SHOOTOUT';
+            W_home = isPen ? 0.75 : 1;
+            W_away = isPen ? 0.25 : 0;
+        } else if (result.winner === away) {
+            const isPen = result.duration === 'PENALTY_SHOOTOUT';
+            W_home = isPen ? 0.25 : 0;
+            W_away = isPen ? 0.75 : 1;
+        } else if (result.homeScore > result.awayScore) {
+            W_home = 1;   W_away = 0;
+        } else if (result.homeScore < result.awayScore) {
+            W_home = 0;   W_away = 1;
+        } else {
+            W_home = 0.5; W_away = 0.5;
+        }
 
         // Aplica atualização Elo
         dynPts[home] = ptsHome + K * (W_home - We_home);
